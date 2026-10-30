@@ -1,20 +1,15 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Inter, Instrument_Serif } from 'next/font/google'
+import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const instrument = Instrument_Serif({
-  subsets: ['latin'],
-  weight: '400',
-  style: ['normal', 'italic'],
-  variable: '--font-instrument',
-})
+const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: 'Maison — Agencia de gestión para creadoras',
+  title: 'Maison Management — Agencia de gestión para creadoras',
   description:
-    'Agencia boutique de gestión para creadoras de contenido. Estrategia, marketing, chat y crecimiento con total discreción.',
+    'Agencia de gestión integral para creadoras de contenido: estrategia, marketing, gestión de chat, analítica y protección de marca con total confidencialidad.',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -27,7 +22,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#f8f5f1',
+  themeColor: '#fcfcfd',
 }
 
 export default function RootLayout({
@@ -36,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} ${instrument.variable}`}>
+    <html lang="es" className={`${geist.variable} ${geistMono.variable}`}>
       <body className="antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
