@@ -1,12 +1,11 @@
 import { ArrowRight, ShieldCheck, TrendingUp } from 'lucide-react'
+import { HeroSceneLoader } from './hero-scene-loader'
 
 const metrics = [
   { label: 'Ingresos mensuales', value: '€48.320', change: '+214%' },
   { label: 'Suscriptores activos', value: '6.912', change: '+167%' },
   { label: 'Tasa de retención', value: '82%', change: '+31%' },
 ]
-
-const bars = [28, 36, 34, 48, 52, 61, 58, 72, 80, 88, 94, 100]
 
 export function Hero() {
   return (
@@ -48,44 +47,32 @@ export function Hero() {
       </div>
 
       <figure
-        aria-label="Ejemplo de panel de resultados de una cliente"
-        className="rounded-xl border bg-card p-6 shadow-sm"
+        aria-label="Composición 3D interactiva con métricas de crecimiento"
+        className="relative h-[460px] w-full md:h-[560px]"
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Panel de rendimiento</p>
-            <p className="text-xs text-muted-foreground">Últimos 12 meses</p>
-          </div>
-          <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 font-mono text-xs">
+        <div className="absolute inset-0">
+          <HeroSceneLoader />
+        </div>
+
+        <div className="absolute left-0 top-6 rounded-xl border bg-card/80 px-4 py-3 shadow-sm backdrop-blur-md">
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <TrendingUp className="size-3.5 text-accent" aria-hidden="true" />
-            En crecimiento
-          </span>
+            Crecimiento medio
+          </p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight">+214%</p>
         </div>
 
-        <div className="mt-8 flex h-40 items-end gap-2" aria-hidden="true">
-          {bars.map((height, index) => (
-            <div
-              key={index}
-              className={`flex-1 rounded-sm ${index === bars.length - 1 ? 'bg-accent' : 'bg-foreground/10'}`}
-              style={{ height: `${height}%` }}
-            />
-          ))}
-        </div>
-
-        <dl className="mt-6 grid grid-cols-3 gap-4 border-t pt-6">
+        <dl className="absolute inset-x-0 bottom-0 grid grid-cols-3 gap-4 rounded-xl border bg-card/80 p-4 shadow-sm backdrop-blur-md">
           {metrics.map((metric) => (
             <div key={metric.label}>
               <dt className="text-xs text-muted-foreground">{metric.label}</dt>
-              <dd className="mt-1 text-lg font-semibold tracking-tight md:text-xl">
+              <dd className="mt-1 text-base font-semibold tracking-tight md:text-lg">
                 {metric.value}
               </dd>
               <dd className="font-mono text-xs text-accent">{metric.change}</dd>
             </div>
           ))}
         </dl>
-        <figcaption className="mt-4 text-xs text-muted-foreground">
-          Datos ilustrativos basados en el promedio de nuestras cuentas.
-        </figcaption>
       </figure>
     </section>
   )
