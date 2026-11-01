@@ -19,8 +19,8 @@ const steps = [
 
 export function Process() {
   return (
-    <section id="proceso" className="border-t">
-      <div className="mx-auto w-full max-w-6xl px-6 py-24">
+    <section id="proceso" className="scroll-mt-16">
+      <div className="mx-auto w-full max-w-6xl px-6 py-28">
         <div className="max-w-2xl">
           <p className="font-mono text-xs uppercase tracking-wider text-accent">Proceso</p>
           <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight md:text-4xl">
@@ -29,8 +29,9 @@ export function Process() {
         </div>
         <ol className="mt-14 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (
-            <li key={step.title} className="border-t-2 border-foreground pt-6">
-              <span className="font-mono text-sm text-muted-foreground">
+            <li key={step.title}>
+              <div id={`a-step-${index}`} aria-hidden="true" className="mb-6 h-44 w-full" />
+              <span className="font-mono text-sm text-accent">
                 {`Paso ${String(index + 1).padStart(2, '0')}`}
               </span>
               <h3 className="mt-3 font-semibold">{step.title}</h3>

@@ -25,17 +25,18 @@ const faqs = [
 
 export function Faq() {
   return (
-    <section id="faq" className="border-t bg-muted/40">
-      <div className="mx-auto grid w-full max-w-6xl gap-12 px-6 py-24 lg:grid-cols-[1fr_2fr]">
+    <section id="faq" className="scroll-mt-16">
+      <div className="mx-auto grid w-full max-w-6xl gap-12 px-6 py-28 lg:grid-cols-[1fr_2fr]">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wider text-accent">Preguntas frecuentes</p>
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">Preguntas frecuentes</p>
           <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight md:text-4xl">
             Resolvemos tus dudas.
           </h2>
+          <div id="a-faq" aria-hidden="true" className="mt-8 hidden aspect-square w-full lg:block" />
         </div>
-        <div className="divide-y rounded-xl border bg-card">
+        <div className="divide-y divide-foreground/10 rounded-2xl bg-background/40 px-6 backdrop-blur-md">
           {faqs.map((faq) => (
-            <details key={faq.q} className="group p-6">
+            <details key={faq.q} className="group py-6">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium [&::-webkit-details-marker]:hidden">
                 {faq.q}
                 <Plus

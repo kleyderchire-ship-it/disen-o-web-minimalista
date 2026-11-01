@@ -6,10 +6,12 @@ import { Process } from '@/components/process'
 import { Faq } from '@/components/faq'
 import { Contact } from '@/components/contact'
 import { SiteFooter } from '@/components/site-footer'
+import { WorldBackground } from '@/components/three/world-background'
 
 export default function Page() {
   return (
     <>
+      <WorldBackground />
       <SiteHeader />
       <main>
         <Hero />

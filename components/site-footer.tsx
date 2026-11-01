@@ -8,7 +8,8 @@ const links = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t">
+    <footer>
+      <div id="a-footer-word" aria-hidden="true" className="mx-auto h-[16vw] max-h-64 w-full max-w-6xl px-6" />
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
         <p>
           <span className="font-semibold text-foreground">Maison Management</span>

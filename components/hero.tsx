@@ -1,79 +1,45 @@
-import { ArrowRight, ShieldCheck, TrendingUp } from 'lucide-react'
-import { HeroSceneLoader } from './hero-scene-loader'
-
-const metrics = [
-  { label: 'Ingresos mensuales', value: '€48.320', change: '+214%' },
-  { label: 'Suscriptores activos', value: '6.912', change: '+167%' },
-  { label: 'Tasa de retención', value: '82%', change: '+31%' },
-]
+import { ArrowRight, ShieldCheck } from 'lucide-react'
 
 export function Hero() {
   return (
-    <section className="mx-auto grid w-full max-w-6xl items-center gap-16 px-6 pb-24 pt-16 md:pt-24 lg:grid-cols-2">
-      <div>
-        <p className="inline-flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+    <section className="flex min-h-svh flex-col justify-center px-6 pb-16 pt-28">
+      <div className="mx-auto w-full max-w-6xl">
+        <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.3em] text-muted-foreground">
           <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
           Gestión integral para creadoras
         </p>
-        <h1 className="mt-6 text-balance text-4xl font-semibold leading-[1.1] tracking-tight md:text-6xl">
-          Convertimos tu contenido en un negocio rentable y sostenible.
-        </h1>
-        <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground">
-          Estrategia, marketing, gestión de chat y protección de marca con un
-          equipo dedicado. Tú te centras en crear; nosotros, en hacerlo crecer.
-        </p>
-        <div className="mt-10 flex flex-wrap items-center gap-4">
-          <a
-            href="#contacto"
-            className="group inline-flex items-center gap-2 rounded-md bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
-          >
-            Solicitar evaluación gratuita
-            <ArrowRight
-              className="size-4 transition-transform group-hover:translate-x-0.5"
-              aria-hidden="true"
-            />
-          </a>
-          <a
-            href="#servicios"
-            className="inline-flex items-center rounded-md border px-5 py-3 text-sm font-medium transition-colors hover:bg-muted"
-          >
-            Ver servicios
-          </a>
-        </div>
-        <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
-          <ShieldCheck className="size-4 text-accent" aria-hidden="true" />
-          Contratos claros y acuerdo de confidencialidad (NDA) desde el primer día.
-        </p>
-      </div>
 
-      <figure
-        aria-label="Composición 3D interactiva con métricas de crecimiento"
-        className="relative h-[460px] w-full md:h-[560px]"
-      >
-        <div className="absolute inset-0">
-          <HeroSceneLoader />
-        </div>
+        <div id="a-hero-title" aria-hidden="true" className="my-10 h-[18vw] max-h-[38vh] w-full" />
 
-        <div className="absolute left-0 top-6 rounded-xl border bg-card/80 px-4 py-3 shadow-sm backdrop-blur-md">
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <TrendingUp className="size-3.5 text-accent" aria-hidden="true" />
-            Crecimiento medio
-          </p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight">+214%</p>
-        </div>
-
-        <dl className="absolute inset-x-0 bottom-0 grid grid-cols-3 gap-4 rounded-xl border bg-card/80 p-4 shadow-sm backdrop-blur-md">
-          {metrics.map((metric) => (
-            <div key={metric.label}>
-              <dt className="text-xs text-muted-foreground">{metric.label}</dt>
-              <dd className="mt-1 text-base font-semibold tracking-tight md:text-lg">
-                {metric.value}
-              </dd>
-              <dd className="font-mono text-xs text-accent">{metric.change}</dd>
+        <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
+          <h1 className="max-w-xl text-balance text-3xl font-semibold leading-tight tracking-tight md:text-5xl">
+            <span className="sr-only">Maison Management. </span>
+            Convertimos tu contenido en un negocio rentable.
+          </h1>
+          <div className="max-w-sm">
+            <p className="text-pretty leading-relaxed text-muted-foreground">
+              Estrategia, marketing, chat y protección de marca con un equipo
+              dedicado. Tú creas; nosotros lo hacemos crecer.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-6">
+              <a
+                href="#contacto"
+                className="group inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
+              >
+                Evaluación gratuita
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </a>
+              <a href="#servicios" className="text-sm font-medium underline-offset-4 hover:underline">
+                Ver servicios
+              </a>
             </div>
-          ))}
-        </dl>
-      </figure>
+            <p className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
+              <ShieldCheck className="size-4 text-accent" aria-hidden="true" />
+              Contrato claro y NDA desde el primer día.
+            </p>
+          </div>
+        </div>
+      </div>
     </section>
   )
 }
