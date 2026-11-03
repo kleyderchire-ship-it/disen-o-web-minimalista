@@ -1,32 +1,44 @@
 const links = [
   { href: '#servicios', label: 'Servicios' },
+  { href: '#resultados', label: 'Resultados' },
   { href: '#proceso', label: 'Proceso' },
-  { href: '#contacto', label: 'Contacto' },
+  { href: '#faq', label: 'Preguntas' },
 ]
 
 export function SiteHeader() {
   return (
-    <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-      <a href="#" className="font-serif text-2xl tracking-tight">
-        Maison<span className="text-accent">.</span>
-      </a>
-      <nav aria-label="Principal" className="flex items-center gap-6 text-sm">
-        {links.map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
+    <header className="fixed inset-x-0 top-0 z-50 bg-background/30 backdrop-blur-md">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
+        <a href="#" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+          <span
+            className="flex size-7 items-center justify-center rounded-md bg-foreground text-xs font-bold text-background"
+            aria-hidden="true"
           >
-            {link.label}
-          </a>
-        ))}
-        <a
-          href="#contacto"
-          className="rounded-full border border-foreground px-4 py-2 transition-colors hover:bg-foreground hover:text-background"
-        >
-          Aplicar
+            M
+          </span>
+          Maison Management
         </a>
-      </nav>
+        <nav aria-label="Principal" className="flex items-center gap-8 text-sm">
+          <ul className="hidden items-center gap-8 md:flex">
+            {links.map((link) => (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+          <a
+            href="#contacto"
+            className="rounded-md bg-foreground px-4 py-2 font-medium text-background transition-opacity hover:opacity-90"
+          >
+            Agendar llamada
+          </a>
+        </nav>
+      </div>
     </header>
   )
 }
