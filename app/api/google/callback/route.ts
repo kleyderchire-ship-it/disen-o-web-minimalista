@@ -32,8 +32,9 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Google no devolvió un refresh token. Revoca el acceso y vuelve a autorizar.', { status: 502 })
   }
 
-  const html = '<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Maison Management</title><body style="font:16px system-ui;max-width:680px;margin:10vh auto;padding:24px"><h1>Autorización completada</h1><p>Google autorizó el calendario. El siguiente paso será guardar el refresh token de forma segura en Vercel.</p><p>Por seguridad, no compartas códigos ni credenciales.</p></body></html>'
-  const result = new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } })
+  const token = String(data.refresh_token).replace(/[&<>"]/g, '')
+  const html = '<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Maison Management</title><body style="font:16px system-ui;max-width:680px;margin:10vh auto;padding:24px"><h1>Autorización completada</h1><p>Copia este valor directamente en Vercel como GOOGLE_REFRESH_TOKEN. No lo compartas por chat ni con nadie.</p><textarea id="t" readonly style="width:100%;min-height:100px">' + token + '</textarea><button onclick="navigator.clipboard.writeText(document.getElementById(\'t\').value)">Copiar token</button><p>Después de guardarlo en Vercel, elimina esta página del historial del navegador.</p></body></html>'
+  const result = new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, max-age=0', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' } })
   result.cookies.set('google_oauth_state', '', { httpOnly: true, secure: true, sameSite: 'lax', path: '/api/google/callback', maxAge: 0 })
   return result
 }
