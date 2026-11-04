@@ -1,6 +1,6 @@
 import { ArrowRight, Check, Mail } from 'lucide-react'
 
-const EMAIL = 'hola@maison.agency'
+const EMAIL = 'Kleyderchire@gmail.com'
 
 const points = [
   'Evaluación gratuita de tu cuenta',
