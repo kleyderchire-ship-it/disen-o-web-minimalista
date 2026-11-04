@@ -12,7 +12,6 @@ const SANS = '/fonts/helvetiker_bold.typeface.json'
 const IVORY = '#efe4d6'
 const ROSE = '#c4475f'
 const WINE = '#6e1f33'
-const BG = '#0d0b0c'
 
 const FOV = 35
 const CAMERA_Z = 14
@@ -390,8 +389,6 @@ export function WorldScene() {
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       camera={{ position: [0, 0, CAMERA_Z], fov: FOV, near: 0.1, far: 60 }}
     >
-      <color attach="background" args={[BG]} />
-      <fog attach="fog" args={[BG, 14, 30]} />
       <ambientLight intensity={0.25} />
       <ScrollCamera />
       <Suspense fallback={null}>
