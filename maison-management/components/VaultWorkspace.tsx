@@ -18,6 +18,9 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
  const [uploading,setUploading]=useState(false)
  const [asyncUpload,setAsyncUpload]=useState(false)
  const [uploadNotice,setUploadNotice]=useState('')
+ const [offset,setOffset]=useState(0)
+ const [hasMore,setHasMore]=useState(false)
+ const [loadingMore,setLoadingMore]=useState(false)
  useEffect(()=>{if(!modelId&&models.length)setModelId(models[0].id)},[models,modelId])
  async function upload(){
   if(!modelId||(!uploadFile&&!uploadUrl.trim()))return
@@ -58,22 +61,26 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
   }catch(e){setError(e instanceof Error?e.message:'Error subiendo contenido.')}
   finally{setUploading(false)}
  }
- async function load(){
+ async function load(append=false){
   if(!modelId)return
   setLoading(true);setError('')
+  const nextOffset=append?offset+48:0
   try{
    const {data}=await supabase.auth.getSession()
-   const params=new URLSearchParams({modelId,offset:'0'})
+   const params=new URLSearchParams({modelId,offset:String(nextOffset)})
    if(type)params.set('type',type)
    if(query.trim())params.set('query',query.trim())
    const response=await fetch('/api/vault?'+params.toString(),{headers:{Authorization:'Bearer '+(data.session?.access_token||'')},cache:'no-store'})
    const payload=await response.json()
    if(!response.ok)throw new Error(payload.error||'No se pudo cargar el vault.')
    const list=Array.isArray(payload?.data?.list)?payload.data.list:Array.isArray(payload?.data)?payload.data:[]
-   setItems(list)
-  }catch(e){setError(e instanceof Error?e.message:'Error cargando la biblioteca.');setItems([])}
-  finally{setLoading(false)}
+   setHasMore(Boolean(payload?.data?.hasMore))
+   setOffset(nextOffset)
+   setItems(current=>append?[...current,...list.filter((item:VaultMedia)=>!current.some(existing=>String(existing.id)===String(item.id)))]:list)
+  }catch(e){setError(e instanceof Error?e.message:'Error cargando la biblioteca.');if(!append)setItems([])}
+  finally{setLoading(false);setLoadingMore(false)}
  }
+ async function loadMore(){if(!hasMore||loading||loadingMore)return;setLoadingMore(true);await load(true)}
  useEffect(()=>{if(modelId)load()},[modelId,type])
  return <div className="vault-workspace">
   <div className="panel vault-upload-panel"><div className="section-head"><div><h2>Subir contenido al vault</h2><p className="page-intro">Añade fotos, videos o audio a la biblioteca de la cuenta.</p></div></div><div className="vault-upload-controls"><div className="field"><label>Archivo (máximo 4 MB)</label><input type="file" accept="image/*,video/*,audio/*" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></div><div className="vault-or">o</div><div className="field"><label>URL pública HTTPS (para archivos grandes)</label><input value={uploadUrl} onChange={e=>setUploadUrl(e.target.value)} placeholder="https://…"/></div><label className="campaign-toggle vault-async-toggle"><input type="checkbox" checked={asyncUpload} onChange={e=>setAsyncUpload(e.target.checked)}/> Procesar en segundo plano (recomendado para videos grandes)</label><button className="btn" onClick={upload} disabled={uploading||(!uploadFile&&!uploadUrl.trim())}>{uploading?'Subiendo…':'Subir al vault'}</button></div>{uploadNotice&&<div className="notice inbox-feedback-ok">{uploadNotice}</div>}</div>
@@ -96,6 +103,7 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
     </article>
    })}
   </div>
+  {hasMore&&<div className="vault-load-more"><button className="btn-ghost" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Cargando…':'Cargar más archivos'}</button></div>}
   <p className="muted">Biblioteca sincronizada con OnlyFans. Puedes subir archivos aquí y seleccionarlos desde el vault para usarlos en mensajes y publicaciones.</p>
  </div>
 }
