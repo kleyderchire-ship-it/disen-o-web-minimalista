@@ -17,6 +17,7 @@ import TrackingLinksWorkspace from '@/components/TrackingLinksWorkspace'
 import SubscriptionAutomationWorkspace from '@/components/SubscriptionAutomationWorkspace'
 import AuditLogWorkspace from '@/components/AuditLogWorkspace'
 import ContentTasksWorkspace from '@/components/ContentTasksWorkspace'
+import TeamPerformanceWorkspace from '@/components/TeamPerformanceWorkspace'
 
 type Model = { id:string; name:string; handle:string; status:string; revenue:number; chatter:string }
 type Sale = { id:string; model:string; type:string; amount:number; chatter:string; date:string }
@@ -152,7 +153,7 @@ export default function Home(){
    </>}
    {section==='models'&&<><div className="section-head"><div><h2>Directorio de modelos</h2><p className="page-intro">Perfiles, estado operativo y responsable asignado.</p></div>{role!=='chatter'&&<button className="btn" onClick={()=>setShowModel(true)}>+ Añadir modelo</button>}</div><div className="toolbar" style={{marginBottom:14}}><input className="search" placeholder="Buscar modelo o usuario..." value={search} onChange={e=>setSearch(e.target.value)}/></div>{supabase&&<AccountConnectPanel models={models} supabase={supabase} role={role}/>}<div className="section-head"><h2>Modelos registrados</h2></div><ModelTable models={filtered}/></>}
    {section==='activity'&&<><div className="section-head"><div><h2>Registro de actividad</h2><p className="page-intro">Auditoría de cambios de permisos, cuentas, ventas, contenido, turnos y automatizaciones.</p></div></div>{supabase&&<AuditLogWorkspace models={models} supabase={supabase}/>}</>}
-   {section==='team'&&<><div className="section-head"><div><h2>Equipo y permisos</h2><p className="page-intro">Invitaciones, roles y asignación de modelos con control de acceso.</p></div></div>{supabase&&<TeamWorkspace models={models} supabase={supabase} role={role}/>}</>}
+   {section==='team'&&<><div className="section-head"><div><h2>Equipo y permisos</h2><p className="page-intro">Invitaciones, roles y asignación de modelos con control de acceso.</p></div></div>{supabase&&<TeamWorkspace models={models} supabase={supabase} role={role}/>}{supabase&&<TeamPerformanceWorkspace models={models} supabase={supabase}/>}</>}
    {section==='inbox'&&<><div className="section-head"><div><h2>Centro de mensajes</h2><p className="page-intro">Bandeja de conversaciones, filtros y respuestas conectadas a OnlyFans.</p></div><span className="date-pill">INBOX MULTICUENTA</span></div>{supabase&&<InboxWorkspace models={models} supabase={supabase} role={role}/>}</>}
    {section==='campaigns'&&<><div className="section-head"><div><h2>Campañas inteligentes</h2><p className="page-intro">Segmenta, programa y envía mensajes a las listas de fans de cada modelo.</p></div></div>{supabase&&<MassCampaignWorkspace models={models} supabase={supabase}/>}</>}
    {section==='scripts'&&<><div className="section-head"><div><h2>Biblioteca de guiones</h2><p className="page-intro">Respuestas guardadas por modelo para agilizar las conversaciones.</p></div></div>{supabase&&<ScriptsWorkspace models={models} supabase={supabase} role={role}/>}</>}
