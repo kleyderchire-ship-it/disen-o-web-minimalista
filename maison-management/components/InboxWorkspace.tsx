@@ -174,10 +174,9 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
         if(createError)throw createError
         conversation=created as any
       } else if (role==='chatter' && !conversation.assigned_to) {
-        const { data: claimed, error: claimError } = await supabase.from('inbox_conversations').update({assigned_to:userId})
-          .eq('id',conversation.id).select('id,assigned_to').single()
-        if(claimError)throw claimError
-        conversation=claimed as any
+        const { data: claimed, error: claimError } = await supabase.rpc('claim_inbox_conversation', { p_conversation_id: conversation.id })
+        if(claimError)throw new Error('No se pudo tomar la conversación; puede que otro chatter la haya reclamado.')
+        conversation=(Array.isArray(claimed)?claimed[0]:claimed) as any
       } else if (role==='chatter' && conversation.assigned_to!==userId) {
         throw new Error('Esta conversación está asignada a otro chatter.')
       }
