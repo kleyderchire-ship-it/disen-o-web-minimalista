@@ -21,7 +21,8 @@ export async function POST(request: Request) {
   if (scheduledDate && Number.isNaN(Date.parse(scheduledDate))) return NextResponse.json({ error: 'Fecha de programación no válida.' }, { status: 400 })
 
   const context = await getFansApiContext(request, modelId)
-  if ('error' in context) return context.error
+  if ('error' in context) return context.error;
+  if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
   const payload: Record<string, unknown> = { text }
   if (userLists.length) payload.userLists = userLists
   if (userIds.length) payload.userIds = userIds
