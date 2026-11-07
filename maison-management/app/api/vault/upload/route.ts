@@ -32,7 +32,10 @@ export async function POST(request:Request){
   const providerForm=new FormData()
   if(file instanceof File)providerForm.append('file',file,file.name)
   else providerForm.append('file_url',fileUrl)
+  const asyncUpload=String(form.get('async')||'')==='true'
+  if(asyncUpload)providerForm.append('async','true')
   const result=await fansApiRequest(`https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/media/vault`,context.apiKey,{method:'POST',body:providerForm})
   if(!result.response.ok)return NextResponse.json({error:'Fans API no pudo guardar el archivo en el vault.',provider:result.payload},{status:result.response.status})
-  return NextResponse.json({ok:true,data:result.payload})
+  const status=result.response.status===202?202:200
+  return NextResponse.json({ok:true,data:result.payload}, {status})
 }
