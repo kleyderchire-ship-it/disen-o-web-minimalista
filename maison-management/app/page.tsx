@@ -15,6 +15,7 @@ import ShiftWorkspace from '@/components/ShiftWorkspace'
 import WelcomeAutomationWorkspace from '@/components/WelcomeAutomationWorkspace'
 import TrackingLinksWorkspace from '@/components/TrackingLinksWorkspace'
 import SubscriptionAutomationWorkspace from '@/components/SubscriptionAutomationWorkspace'
+import AuditLogWorkspace from '@/components/AuditLogWorkspace'
 
 type Model = { id:string; name:string; handle:string; status:string; revenue:number; chatter:string }
 type Sale = { id:string; model:string; type:string; amount:number; chatter:string; date:string }
@@ -24,7 +25,7 @@ type ContentEntry = { id:string; model:string; kind:string; caption:string; stat
 
 const initialModels:Model[]=[]
 const initialSales:Sale[]=[]
-const navItems=[['overview','◫','Resumen'],['inbox','✉','Mensajes'],['campaigns','◈','Campañas'],['automations','⟳','Automatizaciones'],['tracking','↗','Tracking links'],['scripts','▤','Guiones'],['shifts','◷','Turnos'],['models','♙','Modelos'],['audience','♧','Fans'],['content','▣','Publicaciones'],['team','♧','Equipo'],['sales','↗','Ventas'],['finance','＄','Finanzas'],['library','▧','Biblioteca']]
+const navItems=[['overview','◫','Resumen'],['inbox','✉','Mensajes'],['campaigns','◈','Campañas'],['automations','⟳','Automatizaciones'],['tracking','↗','Tracking links'],['scripts','▤','Guiones'],['shifts','◷','Turnos'],['models','♙','Modelos'],['audience','♧','Fans'],['content','▣','Publicaciones'],['team','♧','Equipo'],['activity','◷','Actividad'],['sales','↗','Ventas'],['finance','＄','Finanzas'],['library','▧','Biblioteca']]
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n)
 
 export default function Home(){
@@ -41,7 +42,7 @@ export default function Home(){
  const [section,setSection]=useState('overview')
  const role=authProfile?.role||'chatter'
  const roleNames={admin:'Administrador',supervisor:'Supervisor',chatter:'Chatter'}
- const allowedSections=role==='admin'?['overview','inbox','campaigns','automations','tracking','scripts','shifts','models','audience','content','team','sales','finance','library']:role==='supervisor'?['overview','inbox','campaigns','automations','tracking','scripts','shifts','models','audience','content','team','sales','library']:['overview','inbox','scripts','shifts','models','audience','content','sales']
+ const allowedSections=role==='admin'?['overview','inbox','campaigns','automations','tracking','scripts','shifts','models','audience','content','team','activity','sales','finance','library']:role==='supervisor'?['overview','inbox','campaigns','automations','tracking','scripts','shifts','models','audience','content','team','activity','sales','library']:['overview','inbox','scripts','shifts','models','audience','content','sales']
  const visibleNavItems=navItems.filter(([key])=>allowedSections.includes(key))
  const [models,setModels]=useState(initialModels)
  const [sales,setSales]=useState(initialSales)
@@ -149,6 +150,7 @@ export default function Home(){
    <div className="section-head"><h2>Modelos destacados</h2><button className="btn-ghost" onClick={()=>setSection('models')}>Ver todos →</button></div><ModelTable models={models.slice(0,3)}/>
    </>}
    {section==='models'&&<><div className="section-head"><div><h2>Directorio de modelos</h2><p className="page-intro">Perfiles, estado operativo y responsable asignado.</p></div>{role!=='chatter'&&<button className="btn" onClick={()=>setShowModel(true)}>+ Añadir modelo</button>}</div><div className="toolbar" style={{marginBottom:14}}><input className="search" placeholder="Buscar modelo o usuario..." value={search} onChange={e=>setSearch(e.target.value)}/></div>{supabase&&<AccountConnectPanel models={models} supabase={supabase} role={role}/>}<div className="section-head"><h2>Modelos registrados</h2></div><ModelTable models={filtered}/></>}
+   {section==='activity'&&<><div className="section-head"><div><h2>Registro de actividad</h2><p className="page-intro">Auditoría de cambios de permisos, cuentas, ventas, contenido, turnos y automatizaciones.</p></div></div>{supabase&&<AuditLogWorkspace models={models} supabase={supabase}/>}</>}
    {section==='team'&&<><div className="section-head"><div><h2>Equipo y permisos</h2><p className="page-intro">Invitaciones, roles y asignación de modelos con control de acceso.</p></div></div>{supabase&&<TeamWorkspace models={models} supabase={supabase} role={role}/>}</>}
    {section==='inbox'&&<><div className="section-head"><div><h2>Centro de mensajes</h2><p className="page-intro">Bandeja de conversaciones, filtros y respuestas conectadas a OnlyFans.</p></div><span className="date-pill">INBOX MULTICUENTA</span></div>{supabase&&<InboxWorkspace models={models} supabase={supabase} role={role}/>}</>}
    {section==='campaigns'&&<><div className="section-head"><div><h2>Campañas inteligentes</h2><p className="page-intro">Segmenta, programa y envía mensajes a las listas de fans de cada modelo.</p></div></div>{supabase&&<MassCampaignWorkspace models={models} supabase={supabase}/>}</>}
