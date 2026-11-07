@@ -13,6 +13,8 @@ type Chat = {
   hasUnreadTips?: boolean
   isMutedNotifications?: boolean
 }
+type VaultAsset = { id: number | string; type: string; files?: { thumb?: { url?: string } | null; preview?: { url?: string } | null; full?: { url?: string } } }
+type MessageMedia = { id?: number | string; type?: string; files?: { thumb?: { url?: string } | null; preview?: { url?: string } | null; full?: { url?: string } } }
 type Message = {
   id?: string | number
   text?: string
@@ -23,7 +25,7 @@ type Message = {
   lockedText?: boolean
   isOpened?: boolean
   seenByFan?: boolean | null
-  media?: unknown[]
+  media?: MessageMedia[]
 }
 
 const plain = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim()
@@ -44,6 +46,11 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [showVault, setShowVault] = useState(false)
+  const [vaultItems, setVaultItems] = useState<VaultAsset[]>([])
+  const [selectedMedia, setSelectedMedia] = useState<string[]>([])
+  const [loadingVault, setLoadingVault] = useState(false)
+  const [vaultError, setVaultError] = useState('')
 
   useEffect(() => {
     if (!modelId && models.length) setModelId(models[0].id)
@@ -119,7 +126,7 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
 
   async function sendMessage(event: React.FormEvent) {
     event.preventDefault()
-    if (!selectedChat || !modelId || !draft.trim()) return
+    if (!selectedChat || !modelId || (!draft.trim() && selectedMedia.length === 0)) return
     const chatId = String(selectedChat.fan?.id || '')
     const price = ppvPrice ? Number(ppvPrice) : 0
     if (price && (price < 3 || price > 200)) {
@@ -134,11 +141,12 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
       const response = await fetch('/api/inbox/messages', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({ modelId, chatId, text: draft.trim(), price, lockedText }),
+        body: JSON.stringify({ modelId, chatId, text: draft.trim(), price, lockedText, mediaFiles: selectedMedia }),
       })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.error || 'No se pudo enviar el mensaje.')
       setDraft('')
+      setSelectedMedia([])
       setPpvPrice('')
       setLockedText(false)
       setNotice('Mensaje enviado a través de Fans API.')
@@ -148,6 +156,25 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
       setError(e instanceof Error ? e.message : 'No se pudo enviar el mensaje.')
     } finally {
       setSending(false)
+    }
+  }
+
+  async function openVault() {
+    setShowVault(true)
+    if (vaultItems.length || !modelId) return
+    setLoadingVault(true)
+    setVaultError('')
+    try {
+      const token = await accessToken()
+      const response = await fetch('/api/vault?'+new URLSearchParams({modelId,offset:'0'}).toString(), {headers:{Authorization:'Bearer '+token},cache:'no-store'})
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || 'No se pudo abrir el vault.')
+      const rows: VaultAsset[] = Array.isArray(payload?.data?.list) ? payload.data.list : []
+      setVaultItems(rows.filter(item => item.isReady !== false && !item.hasError))
+    } catch (e) {
+      setVaultError(e instanceof Error ? e.message : 'Error cargando el vault.')
+    } finally {
+      setLoadingVault(false)
     }
   }
 
@@ -184,18 +211,20 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
           <header className="inbox-thread-head"><div><strong>{selectedChat.fan?.displayName || selectedChat.fan?.name || selectedChat.fan?.username || 'Conversación'}</strong><small>@{selectedChat.fan?.username || selectedChat.fan?.id}</small></div><span className="date-pill">{selectedChat.unreadMessagesCount ? selectedChat.unreadMessagesCount + ' sin leer' : 'Conversación'}</span></header>
           <div className="inbox-messages">
             {loadingMessages && <div className="empty">Cargando mensajes…</div>}
-            {!loadingMessages && messages.map((message, index) => <div key={String(message.id || index)} className={'inbox-message-row ' + (message.isSentByMe ? 'outgoing' : 'incoming')}><div className="inbox-message"><p>{plain(message.text || (message.media?.length ? 'Contenido multimedia' : 'Mensaje'))}</p>{message.price ? <strong className="inbox-ppv">PPV · {message.price} USD</strong> : null}<small>{time(message.createdAt)}{message.isSentByMe ? (message.seenByFan ? ' · Visto' : ' · Enviado') : ''}</small></div></div>)}
+            {!loadingMessages && messages.map((message, index) => <div key={String(message.id || index)} className={'inbox-message-row ' + (message.isSentByMe ? 'outgoing' : 'incoming')}><div className="inbox-message"><p>{plain(message.text || (message.media?.length ? 'Contenido multimedia' : 'Mensaje'))}</p>{message.media?.length ? <div className="inbox-message-media">{message.media.map((asset,i)=>{const src=asset.files?.preview?.url||asset.files?.thumb?.url||asset.files?.full?.url;return src?<img key={String(asset.id||i)} src={src} alt={asset.type||'Archivo multimedia'}/>:<span key={String(asset.id||i)}>{asset.type||'Multimedia'}</span>})}</div>:null}{message.price ? <strong className="inbox-ppv">PPV · {message.price} USD</strong> : null}<small>{time(message.createdAt)}{message.isSentByMe ? (message.seenByFan ? ' · Visto' : ' · Enviado') : ''}</small></div></div>)}
             {!loadingMessages && messages.length === 0 && <div className="empty">Esta conversación no contiene mensajes visibles.</div>}
           </div>
           <form className="inbox-composer" onSubmit={sendMessage}>
             <textarea value={draft} onChange={e => setDraft(e.target.value)} placeholder="Escribe una respuesta…" rows={3}/>
-            <div className="inbox-compose-bottom"><label className="inbox-ppv-field">Precio PPV (USD)<input type="number" min="3" max="200" step="0.01" value={ppvPrice} onChange={e => setPpvPrice(e.target.value)} placeholder="Gratis"/></label><label className="inbox-check"><input type="checkbox" checked={lockedText} onChange={e => setLockedText(e.target.checked)}/> Bloquear texto</label><button className="btn" disabled={sending || !draft.trim()}>{sending ? 'Enviando…' : 'Enviar mensaje'}</button></div>
+            {selectedMedia.length>0&&<div className="inbox-selected-media">{selectedMedia.map(id=><button type="button" key={id} className="inbox-media-chip" onClick={()=>setSelectedMedia(v=>v.filter(x=>x!==id))}>Archivo #{id} ×</button>)}</div>}
+            <div className="inbox-compose-bottom"><button type="button" className="btn-ghost" onClick={openVault}>＋ Añadir del vault</button><label className="inbox-ppv-field">Precio PPV (USD)<input type="number" min="3" max="200" step="0.01" value={ppvPrice} onChange={e => setPpvPrice(e.target.value)} placeholder="Gratis"/></label><label className="inbox-check"><input type="checkbox" checked={lockedText} onChange={e => setLockedText(e.target.checked)}/> Bloquear texto</label><button className="btn" disabled={sending || (!draft.trim() && selectedMedia.length===0)}>{sending ? 'Enviando…' : 'Enviar mensaje'}</button></div>
           </form>
         </>}
       </div>
     </div>
     {error && <div className="notice inbox-feedback-error">{error}</div>}
     {notice && <div className="notice inbox-feedback-ok">{notice}</div>}
+    {showVault&&<div className="modal-backdrop" onClick={()=>setShowVault(false)}><div className="modal inbox-vault-modal" onClick={e=>e.stopPropagation()}><div className="modal-head"><h3>Seleccionar contenido del vault</h3><button type="button" className="btn-ghost" onClick={()=>setShowVault(false)}>Cerrar</button></div>{loadingVault&&<div className="empty">Cargando archivos…</div>}{vaultError&&<div className="notice inbox-feedback-error">{vaultError}</div>}{!loadingVault&&!vaultError&&vaultItems.length===0&&<div className="empty">No hay archivos listos en el vault.</div>}<div className="inbox-vault-grid">{vaultItems.map(item=>{const id=String(item.id);const src=item.files?.preview?.url||item.files?.thumb?.url||item.files?.full?.url;const selected=selectedMedia.includes(id);return <button type="button" key={id} className={'inbox-vault-item '+(selected?'selected':'')} onClick={()=>setSelectedMedia(v=>selected?v.filter(x=>x!==id):[...v,id])}>{src?<img src={src} alt="Contenido del vault"/>:<span>{item.type}</span>}<small>#{id} · {item.type}</small></button>})}</div><div className="modal-actions"><span className="muted">{selectedMedia.length} archivo(s) seleccionados</span><button type="button" className="btn" onClick={()=>setShowVault(false)}>Usar selección</button></div></div></div>}
     <p className="muted inbox-disclaimer">La bandeja consulta conversaciones de OnlyFans mediante Fans API. El envío requiere una cuenta conectada y una clave de integración configurada de forma privada en el servidor.</p>
   </section>
 }
