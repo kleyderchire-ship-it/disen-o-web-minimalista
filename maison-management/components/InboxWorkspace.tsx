@@ -130,7 +130,7 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
     if(!selectedChat||!modelId||!hasOlderMessages||loadingOlderMessages||!messages.length)return
     const chatId=String(selectedChat.fan?.id||'')
     const firstId=String(messages[0]?.id||'')
-    if(!/^\\d{1,32}$/.test(firstId))return
+    if(!/^\d{1,32}$/.test(firstId))return
     setLoadingOlderMessages(true);setError('')
     try{
       const token=await accessToken()
