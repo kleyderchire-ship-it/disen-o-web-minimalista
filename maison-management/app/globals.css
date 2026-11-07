@@ -47,3 +47,6 @@
 
 
 .inbox-thread-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+
+.welcome-automation{padding:20px}.welcome-automation textarea{background:#0c0f10;border:1px solid var(--line);border-radius:8px;color:white;padding:11px;font:inherit;font-size:12px;resize:vertical}
