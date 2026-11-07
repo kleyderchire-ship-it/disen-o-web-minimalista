@@ -31,3 +31,7 @@
 
 
 .fan-crm-filter{display:flex;align-items:end;gap:9px;flex-wrap:wrap;padding:14px;margin-bottom:16px}.fan-crm-filter .field{min-width:130px;flex:1}.fan-crm-filter input{background:#0c0f10;border:1px solid var(--line);border-radius:8px;color:white;padding:10px;width:100%;min-width:0}.fan-crm-search{min-width:190px!important}.fan-avatar-img{object-fit:cover;display:block}.fan-crm-pagination{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px}
+
+
+.team-invite{padding:18px;margin-bottom:18px}.team-invite-button .btn{width:100%}.team-role-select{background:#171013;border:1px solid #54202d;border-radius:7px;color:#f0e8ea;padding:7px 8px;font-size:10px}.team-assignment{padding:16px}.team-assignment-form{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:10px;padding-bottom:15px;border-bottom:1px solid var(--line)}.team-assignment-list{display:flex;flex-direction:column}.team-assignment-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 4px;border-bottom:1px solid #222729}.team-assignment-row:last-child{border:0}.team-assignment-row strong,.team-assignment-row small{display:block}.team-assignment-row strong{font-size:11px}.team-assignment-row small{font-size:10px;color:var(--muted);margin-top:3px}
+@media(max-width:650px){.team-assignment-form{grid-template-columns:1fr}.team-invite-button{grid-column:1/-1}}
