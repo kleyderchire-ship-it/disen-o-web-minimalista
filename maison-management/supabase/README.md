@@ -31,9 +31,9 @@ Procesa:
 3. Usa exactamente el mismo valor de `FANS_API_WEBHOOK_SECRET` como Signing Secret.
 4. Suscribe los eventos enumerados en la sección anterior.
 5. En MAISON → Modelos, un administrador inicia la conexión Auth+. La creadora abre el enlace en su propio iPhone y completa la autorización.
-6. Envía eventos de prueba desde el panel de Fans API y verifica Mensajes, Fans, Ventas y el estado de conexión.
+6. Envía eventos de prueba desde el panel de Fans API y verifica Fans, historial de suscripciones y estado de conexión.
 
-El receptor valida la firma HMAC-SHA256 del cuerpo original y deduplica mediante `X-OFAPI-Idempotency-Key`. Los webhooks pueden reintentarse y no siempre llegan en orden. La bandeja consulta el proveedor y también se actualiza con eventos recibidos.
+El receptor valida la firma HMAC-SHA256 del cuerpo original y deduplica mediante `X-OFAPI-Idempotency-Key`. Los webhooks pueden reintentarse y no siempre llegan en orden. La bandeja de mensajes consulta directamente la API de Fans API; el receptor de webhook descrito aquí no sincroniza el historial de mensajes ni las transacciones.
 
 ## Variables pendientes para activar la conexión real
 - Vercel: `FANS_API_KEY` (Production y Preview).
