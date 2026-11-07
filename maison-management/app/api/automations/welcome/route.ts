@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const mediaFiles = Array.isArray(body?.mediaFiles) ? body.mediaFiles.filter((x: unknown) => typeof x === 'string') : []
   const price = body?.price == null ? 0 : Number(body.price)
   if (!/^[0-9a-f-]{36}$/i.test(modelId) || (!text && mediaFiles.length===0)) return NextResponse.json({ error: 'Modelo y texto o contenido multimedia son obligatorios.' }, { status: 400 })
-  if (!Number.isFinite(price) || (price!==0&&(price<3||price>200))) return NextResponse.json({ error: 'El precio debe ser 0 o estar entre 3 y 200 USD.' }, { status: 400 })
+  if (!Number.isFinite(price) || (price!==0&&(!Number.isInteger(price)||price<3||price>200))) return NextResponse.json({ error: 'El precio debe ser 0 o estar entre 3 y 200 USD.' }, { status: 400 })
   if (price>0&&mediaFiles.length===0) return NextResponse.json({ error: 'Un mensaje de bienvenida PPV necesita archivos multimedia.' }, { status: 400 })
   const context = await getFansApiContext(request, modelId)
   if ('error' in context) return context.error
