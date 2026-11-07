@@ -10,7 +10,7 @@ export async function GET(request:Request){
  if('error' in context)return context.error
  if(context.role==='chatter')return NextResponse.json({error:'Solo administradores y supervisores pueden ver el historial.'},{status:403})
  const {data,error}=await context.supabase.from('automation_runs')
-  .select('id,rule_id,fan_provider_id,source_event_id,provider_message_id,status,error,sent_at,created_at')
+  .select('id,rule_id,fan_provider_id,source_event_id,provider_message_id,status,error,sent_at,scheduled_at,attempts,created_at')
   .eq('model_id',modelId).order('created_at',{ascending:false}).limit(30)
  if(error)return NextResponse.json({error:'No se pudo cargar el historial de automatizaciones.'},{status:500})
  return NextResponse.json({data:data||[]})
