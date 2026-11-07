@@ -20,7 +20,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Esta conversación no está asignada a tu usuario.' }, { status: 403 })
   }
 
-  const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 50)))
+  const rawLimit = Number(searchParams.get('limit') || 50)
+  const limit = Number.isFinite(rawLimit) ? Math.min(100, Math.max(1, Math.trunc(rawLimit))) : 50
   const params = new URLSearchParams({ limit: String(limit), order: 'desc', skip_users: 'none' })
   const firstId = searchParams.get('first_id')
   if (firstId && /^\d{1,32}$/.test(firstId)) params.set('first_id', firstId)
