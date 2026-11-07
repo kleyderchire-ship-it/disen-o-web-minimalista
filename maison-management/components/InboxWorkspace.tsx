@@ -60,6 +60,11 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
   const [notes, setNotes] = useState<Note[]>([])
   const [noteDraft, setNoteDraft] = useState('')
   const [scripts, setScripts] = useState<Script[]>([])
+  const [chatOffset, setChatOffset] = useState(0)
+  const [hasMoreChats, setHasMoreChats] = useState(false)
+  const [loadingMoreChats, setLoadingMoreChats] = useState(false)
+  const [hasOlderMessages, setHasOlderMessages] = useState(false)
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false)
 
   useEffect(() => {
     if (!modelId && models.length) setModelId(models[0].id)
@@ -78,20 +83,30 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
     return data.session?.access_token || ''
   }
 
-  async function loadChats() {
+  async function loadChats(append = false) {
     if (!modelId) return
     setLoadingChats(true)
     setError('')
     try {
       const token = await accessToken()
-      const params = new URLSearchParams({ modelId, limit: '50' })
+      const offset = append ? chatOffset + 50 : 0
+      const params = new URLSearchParams({ modelId, limit: '50', offset: String(offset) })
       if (filter !== 'all') params.set('filter', filter)
       if (search.trim()) params.set('query', search.trim())
       const response = await fetch('/api/inbox/chats?' + params.toString(), { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.error || 'No se pudo cargar la bandeja.')
       const rows: Chat[] = Array.isArray(payload?.data) ? payload.data : []
-      setChats(rows)
+      const nextPage = payload?._pagination?.next_page
+      setHasMoreChats(Boolean(nextPage))
+      setChatOffset(offset)
+      setChats(current => {
+        if (!append) return rows
+        const merged = [...current]
+        const known = new Set(current.map(chat => String(chat.fan?.id || '')))
+        for (const row of rows) if (!known.has(String(row.fan?.id || ''))) merged.push(row)
+        return merged
+      })
       if (selectedChat) {
         const refreshed = rows.find(chat => String(chat.fan?.id || '') === String(selectedChat.fan?.id || ''))
         if (refreshed) setSelectedChat(refreshed)
@@ -101,7 +116,37 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
       setChats([])
     } finally {
       setLoadingChats(false)
+      setLoadingMoreChats(false)
     }
+  }
+
+  async function loadMoreChats(){
+    if(!hasMoreChats||loadingChats||loadingMoreChats)return
+    setLoadingMoreChats(true)
+    await loadChats(true)
+  }
+
+  async function loadOlderMessages(){
+    if(!selectedChat||!modelId||!hasOlderMessages||loadingOlderMessages||!messages.length)return
+    const chatId=String(selectedChat.fan?.id||'')
+    const firstId=String(messages[0]?.id||'')
+    if(!/^\\d{1,32}$/.test(firstId))return
+    setLoadingOlderMessages(true);setError('')
+    try{
+      const token=await accessToken()
+      const params=new URLSearchParams({modelId,chatId,limit:'50',first_id:firstId})
+      const response=await fetch('/api/inbox/messages?'+params.toString(),{headers:{Authorization:'Bearer '+token},cache:'no-store'})
+      const payload=await response.json()
+      if(!response.ok)throw new Error(payload.error||'No se pudo cargar el historial anterior.')
+      const rows:Message[]=Array.isArray(payload?.data)?payload.data:[]
+      const older=rows.slice().reverse()
+      setMessages(current=>{
+        const known=new Set(current.map(message=>String(message.id||'')))
+        return [...older.filter(message=>!known.has(String(message.id||''))),...current]
+      })
+      setHasOlderMessages(Boolean(payload?._pagination?.next_page))
+    }catch(e){setError(e instanceof Error?e.message:'No se pudo cargar el historial anterior.')}
+    finally{setLoadingOlderMessages(false)}
   }
 
   async function loadMessages(chat: Chat) {
@@ -152,6 +197,7 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
       if (!response.ok) throw new Error(payload.error || 'No se pudo abrir la conversación.')
       const rows: Message[] = Array.isArray(payload?.data) ? payload.data : []
       setMessages(rows.slice().reverse())
+      setHasOlderMessages(Boolean(payload?._pagination?.next_page))
       await fetch('/api/inbox/chats/read', { method:'POST', headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({modelId,chatId,action:'read'}) })
       setChats(current=>current.map(item=>String(item.fan?.id||'')===chatId?{...item,unreadMessagesCount:0}:item))
       await supabase.from('inbox_conversations').update({unread_count:0}).eq('model_id',modelId).eq('provider_chat_id',chatId)
@@ -315,6 +361,7 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
               <span className="inbox-chat-meta">{chat.unreadMessagesCount ? <b>{chat.unreadMessagesCount}</b> : null}<small>{time(chat.lastMessage?.createdAt)}</small></span>
             </button>
           })}
+          {hasMoreChats&&<button className="btn-ghost inbox-load-more" onClick={loadMoreChats} disabled={loadingMoreChats}>{loadingMoreChats?'Cargando…':'Cargar más conversaciones'}</button>}
         </div>
       </aside>
       <div className="inbox-thread panel">
@@ -323,6 +370,7 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
           <header className="inbox-thread-head"><div><strong>{selectedChat.fan?.displayName || selectedChat.fan?.name || selectedChat.fan?.username || 'Conversación'}</strong><small>@{selectedChat.fan?.username || selectedChat.fan?.id}</small></div><div className="inbox-thread-actions"><span className="date-pill">{selectedChat.unreadMessagesCount ? selectedChat.unreadMessagesCount + ' sin leer' : 'Conversación'}</span>{(role==='admin'||role==='supervisor')?<select className="inbox-assign-select" value={assignedTo} onChange={e=>assignConversation(e.target.value)}><option value="">Sin asignar</option>{teamProfiles.map(person=><option key={person.id} value={person.id}>{person.full_name} · {person.role}</option>)}</select>:<span className="date-pill">{assignedTo===currentUserId?'Asignado a ti':'Asignado'}</span>}<button type="button" className="btn-ghost" onClick={markUnread}>Marcar no leído</button></div></header>
           {notes.length>0&&<div className="inbox-notes"><strong>Notas internas del equipo</strong>{notes.slice(0,3).map(note=><p key={note.id}>{note.note}<small>{time(note.created_at)}</small></p>)}</div>}
           <div className="inbox-messages">
+            {hasOlderMessages&&<button type="button" className="btn-ghost inbox-load-older" onClick={loadOlderMessages} disabled={loadingOlderMessages}>{loadingOlderMessages?'Cargando historial…':'↑ Cargar mensajes anteriores'}</button>}
             {loadingMessages && <div className="empty">Cargando mensajes…</div>}
             {!loadingMessages && messages.map((message, index) => <div key={String(message.id || index)} className={'inbox-message-row ' + (message.isSentByMe ? 'outgoing' : 'incoming')}><div className="inbox-message"><p>{plain(message.text || (message.media?.length ? 'Contenido multimedia' : 'Mensaje'))}</p>{message.media?.length ? <div className="inbox-message-media">{message.media.map((asset,i)=>{const src=asset.files?.preview?.url||asset.files?.thumb?.url||asset.files?.full?.url;return src?<img key={String(asset.id||i)} src={src} alt={asset.type||'Archivo multimedia'}/>:<span key={String(asset.id||i)}>{asset.type||'Multimedia'}</span>})}</div>:null}{message.price ? <strong className="inbox-ppv">PPV · {message.price} USD</strong> : null}<small>{time(message.createdAt)}{message.isSentByMe ? (message.seenByFan ? ' · Visto' : ' · Enviado') : ''}</small></div></div>)}
             {!loadingMessages && messages.length === 0 && <div className="empty">Esta conversación no contiene mensajes visibles.</div>}
