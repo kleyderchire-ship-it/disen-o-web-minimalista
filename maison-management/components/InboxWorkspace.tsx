@@ -133,6 +133,8 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
       if (!response.ok) throw new Error(payload.error || 'No se pudo abrir la conversación.')
       const rows: Message[] = Array.isArray(payload?.data) ? payload.data : []
       setMessages(rows.slice().reverse())
+      await fetch('/api/inbox/chats/read', { method:'POST', headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({modelId,chatId,action:'read'}) })
+      setChats(current=>current.map(item=>String(item.fan?.id||'')===chatId?{...item,unreadMessagesCount:0}:item))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al abrir conversación.')
       setMessages([])
@@ -204,6 +206,21 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
     }
   }
 
+  async function markUnread() {
+    if (!selectedChat || !modelId) return
+    const chatId = String(selectedChat.fan?.id || '')
+    try {
+      const token = await accessToken()
+      const response = await fetch('/api/inbox/chats/read', { method:'POST', headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({modelId,chatId,action:'unread'}) })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || 'No se pudo marcar como no leído.')
+      setSelectedChat({...selectedChat,unreadMessagesCount:1})
+      await loadChats()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo actualizar el chat.')
+    }
+  }
+
   async function saveNote(event: React.FormEvent) {
     event.preventDefault()
     if (!conversationId || !modelId || !noteDraft.trim()) return
@@ -267,7 +284,7 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
       <div className="inbox-thread panel">
         {!selectedChat && <div className="empty inbox-thread-empty"><div style={{fontSize:32,marginBottom:12}}>✉</div><strong>Tu centro de mensajes</strong><p>Selecciona una conversación para ver el historial y responder desde MAISON.</p></div>}
         {selectedChat && <>
-          <header className="inbox-thread-head"><div><strong>{selectedChat.fan?.displayName || selectedChat.fan?.name || selectedChat.fan?.username || 'Conversación'}</strong><small>@{selectedChat.fan?.username || selectedChat.fan?.id}</small></div><span className="date-pill">{selectedChat.unreadMessagesCount ? selectedChat.unreadMessagesCount + ' sin leer' : 'Conversación'}</span></header>
+          <header className="inbox-thread-head"><div><strong>{selectedChat.fan?.displayName || selectedChat.fan?.name || selectedChat.fan?.username || 'Conversación'}</strong><small>@{selectedChat.fan?.username || selectedChat.fan?.id}</small></div><div className="inbox-thread-actions"><span className="date-pill">{selectedChat.unreadMessagesCount ? selectedChat.unreadMessagesCount + ' sin leer' : 'Conversación'}</span><button type="button" className="btn-ghost" onClick={markUnread}>Marcar no leído</button></div></header>
           {notes.length>0&&<div className="inbox-notes"><strong>Notas internas del equipo</strong>{notes.slice(0,3).map(note=><p key={note.id}>{note.note}<small>{time(note.created_at)}</small></p>)}</div>}
           <div className="inbox-messages">
             {loadingMessages && <div className="empty">Cargando mensajes…</div>}
