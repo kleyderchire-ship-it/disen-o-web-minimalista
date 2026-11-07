@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     .eq('model_id', modelId).eq('provider_attempt_id', attemptId).eq('created_by', context.user.id).single()
   if (attemptError || !attempt) return NextResponse.json({ error: 'No se encontró este intento para el modelo seleccionado.' }, { status: 404 })
 
-  const poll = await fansApiRequest('https://app.onlyfansapi.com/api/authenticate/' + encodeURIComponent(attemptId), context.apiKey)
+  const poll = await fansApiRequest('https://api.fansapi.com/api/authenticate/' + encodeURIComponent(attemptId), context.apiKey)
   if (!poll.response.ok) return NextResponse.json({ error: 'No se pudo consultar el estado en Fans API.', provider: poll.payload }, { status: poll.response.status })
   const data: any = poll.payload
   const state = String(data?.state || 'pending')
