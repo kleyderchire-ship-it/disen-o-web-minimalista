@@ -46,6 +46,7 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
   const [loadingChats, setLoadingChats] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [sending, setSending] = useState(false)
+  const [pendingSend, setPendingSend] = useState<{signature:string;key:string}|null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [showVault, setShowVault] = useState(false)
@@ -251,13 +252,18 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
     setNotice('')
     try {
       const token = await accessToken()
+      const requestBody = { modelId, chatId, text: draft.trim(), price, lockedText, mediaFiles: selectedMedia }
+      const signature = JSON.stringify(requestBody)
+      const idempotencyKey = pendingSend?.signature === signature ? pendingSend.key : crypto.randomUUID()
+      setPendingSend({ signature, key: idempotencyKey })
       const response = await fetch('/api/inbox/messages', {
         method: 'POST',
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({ modelId, chatId, text: draft.trim(), price, lockedText, mediaFiles: selectedMedia }),
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify(requestBody),
       })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.error || 'No se pudo enviar el mensaje.')
+      setPendingSend(null)
       setDraft('')
       setSelectedMedia([])
       setPpvPrice('')
