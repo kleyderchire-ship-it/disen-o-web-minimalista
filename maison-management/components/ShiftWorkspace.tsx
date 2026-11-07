@@ -38,7 +38,7 @@ export default function ShiftWorkspace({models,supabase,role}:{models:Model[];su
    setProfiles((p.data||[]) as Profile[]);setShifts((s.data||[]) as Shift[]);setEntries((e.data||[]) as Entry[])
    setCurrentUserId(u.data.user?.id||'')
    if(!modelId&&models.length)setModelId(models[0].id)
-   if(!userId&&p.data?.length)setUserId(manager?(p.data[0].id):(u.data.user?.id||''))
+   if(!userId&&p.data?.length)setUserId(manager?((p.data.find((x:any)=>x.role==='chatter')?.id)||''):(u.data.user?.id||''))
   }catch(e){setError(e instanceof Error?e.message:'No se pudo cargar el calendario de turnos.')}
   finally{setLoading(false)}
  }
