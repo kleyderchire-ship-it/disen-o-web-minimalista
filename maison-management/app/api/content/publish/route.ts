@@ -23,6 +23,7 @@ export async function POST(request: Request) {
 
   const context = await getFansApiContext(request, modelId)
   if ('error' in context) return context.error
+  if (context.role === 'chatter') return NextResponse.json({ error: 'Los chatters pueden preparar borradores internos; solo administradores y supervisores pueden publicar en OnlyFans.' }, { status: 403 })
   if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
 
   const initialStatus = 'draft'
