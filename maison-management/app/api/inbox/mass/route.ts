@@ -23,6 +23,7 @@ export async function POST(request: Request) {
 
   const context = await getFansApiContext(request, modelId)
   if ('error' in context) return context.error;
+  if (context.role === 'chatter') return NextResponse.json({ error: 'Solo administradores y supervisores pueden enviar campañas masivas.' }, { status: 403 });
   if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
   const payload: Record<string, unknown> = { text }
   if (userLists.length) payload.userLists = userLists
