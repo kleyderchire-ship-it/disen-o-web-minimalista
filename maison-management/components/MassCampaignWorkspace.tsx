@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 type Model={id:string;name:string}
 type AudienceList={id:string|number;name:string;usersCount?:number;type?:string}
+type VaultMedia={id:string|number;type:string;files?:{thumb?:{url?:string}|null;preview?:{url?:string}|null;full?:{url?:string}}}
 
 export default function MassCampaignWorkspace({models,supabase}:{models:Model[];supabase:SupabaseClient}){
  const [modelId,setModelId]=useState('')
@@ -21,6 +22,10 @@ export default function MassCampaignWorkspace({models,supabase}:{models:Model[];
  const [sending,setSending]=useState(false)
  const [error,setError]=useState('')
  const [notice,setNotice]=useState('')
+ const [vaultItems,setVaultItems]=useState<VaultMedia[]>([])
+ const [showVault,setShowVault]=useState(false)
+ const [vaultLoading,setVaultLoading]=useState(false)
+ const [vaultError,setVaultError]=useState('')
  useEffect(()=>{if(!modelId&&models.length)setModelId(models[0].id)},[models,modelId])
  async function token(){const {data}=await supabase.auth.getSession();return data.session?.access_token||''}
  async function loadLists(){
@@ -38,6 +43,22 @@ export default function MassCampaignWorkspace({models,supabase}:{models:Model[];
  }
  useEffect(()=>{setSelected([]);setLists([]);if(modelId)loadLists()},[modelId])
  const selectedCount=lists.filter(x=>selected.includes(String(x.id))).reduce((sum,x)=>sum+(x.usersCount||0),0)
+ async function openVault(){
+  if(!modelId)return
+  setShowVault(true);setVaultLoading(true);setVaultError('')
+  try{
+   const response=await fetch('/api/vault?'+new URLSearchParams({modelId,offset:'0'}),{headers:{Authorization:'Bearer '+await token()},cache:'no-store'})
+   const payload=await response.json()
+   if(!response.ok)throw new Error(payload.error||'No se pudo abrir el vault.')
+   const rows:VaultMedia[]=Array.isArray(payload?.data?.list)?payload.data.list:[]
+   setVaultItems(rows.filter(item=>(item as any).isReady!==false&&!(item as any).hasError))
+  }catch(e){setVaultError(e instanceof Error?e.message:'No se pudo abrir el vault.')}
+  finally{setVaultLoading(false)}
+ }
+ function toggleMedia(id:string){
+  const current=mediaIds.split(',').map(x=>x.trim()).filter(Boolean)
+  setMediaIds(current.includes(id)?current.filter(x=>x!==id).join(', '):[...current,id].join(', '))
+ }
  async function send(){
   if(!message.trim()||!selected.length)return
   const model=models.find(x=>x.id===modelId)
@@ -69,7 +90,7 @@ export default function MassCampaignWorkspace({models,supabase}:{models:Model[];
     <div className="field"><label>Nombre interno de campaña</label><input value={campaignName} onChange={e=>setCampaignName(e.target.value)} placeholder="Ej. Recompra VIP de noviembre"/></div>
     <div className="field" style={{gridColumn:'1/-1'}}><label>Audiencia (puedes seleccionar varias listas)</label><div className="campaign-list-box">{loading&&<div className="empty">Cargando listas…</div>}{!loading&&lists.length===0&&<div className="empty">No hay listas disponibles o la cuenta no está conectada.</div>}{lists.map(list=><label className="campaign-list-option" key={String(list.id)}><input type="checkbox" checked={selected.includes(String(list.id))} onChange={e=>setSelected(current=>e.target.checked?[...current,String(list.id)]:current.filter(id=>id!==String(list.id)))}/><span><strong>{list.name}</strong><small>{list.usersCount??0} destinatarios · {list.type||'lista'}</small></span></label>)}</div><div className="muted">{selected.length} listas seleccionadas · {selectedCount} destinatarios aproximados</div></div>
     <div className="field" style={{gridColumn:'1/-1'}}><label>Mensaje</label><textarea rows={5} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Escribe el mensaje que recibirán los fans…"/></div>
-    <div className="field"><label>IDs de medios del vault (separados por coma)</label><input value={mediaIds} onChange={e=>setMediaIds(e.target.value)} placeholder="Opcional: 123456789, 987654321"/></div>
+    <div className="field"><label>Archivos multimedia</label><input value={mediaIds} onChange={e=>setMediaIds(e.target.value)} placeholder="IDs del vault separados por coma…"/><button type="button" className="btn-ghost" onClick={openVault}>Seleccionar del vault</button></div>
     <div className="field"><label>Precio PPV (USD)</label><input type="number" min="3" max="200" step="1" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Gratis"/></div>
     <div className="field"><label>Texto bloqueado</label><label className="campaign-toggle"><input type="checkbox" checked={lockedText} onChange={e=>setLockedText(e.target.checked)}/> Bloquear texto hasta la compra</label></div>
     <div className="field"><label>Programar para (opcional)</label><input type="datetime-local" value={scheduled} onChange={e=>setScheduled(e.target.value)}/></div>
@@ -78,6 +99,7 @@ export default function MassCampaignWorkspace({models,supabase}:{models:Model[];
    <div className="campaign-actions"><button className="btn-ghost" onClick={loadLists} disabled={loading}>Actualizar listas</button><button className="btn" onClick={send} disabled={sending||!message.trim()||!selected.length}>{sending?'Procesando…':scheduled?'Programar campaña':'Enviar campaña'}</button></div>
    {error&&<div className="notice inbox-feedback-error">{error}</div>}{notice&&<div className="notice inbox-feedback-ok">{notice}</div>}
   </div>
+  {showVault&&<div className="modal-backdrop" onClick={()=>setShowVault(false)}><div className="modal publisher-vault-modal" onClick={e=>e.stopPropagation()}><div className="modal-head"><h3>Seleccionar multimedia del vault</h3><button type="button" className="btn-ghost" onClick={()=>setShowVault(false)}>Cerrar</button></div>{vaultLoading&&<div className="empty">Cargando biblioteca…</div>}{vaultError&&<div className="notice inbox-feedback-error">{vaultError}</div>}<div className="publisher-vault-grid">{vaultItems.map(item=>{const id=String(item.id);const src=item.files?.preview?.url||item.files?.thumb?.url||item.files?.full?.url;const chosen=mediaIds.split(',').map(x=>x.trim()).includes(id);return <button type="button" key={id} className={'inbox-vault-item '+(chosen?'selected':'')} onClick={()=>toggleMedia(id)}>{src?<img src={src} alt="Archivo del vault"/>:<span>{item.type}</span>}<small>#{id} · {item.type}</small></button>})}</div>{!vaultLoading&&!vaultError&&vaultItems.length===0&&<div className="empty">No hay archivos disponibles.</div>}<div className="modal-actions"><span className="muted">{mediaIds.split(',').map(x=>x.trim()).filter(Boolean).length} archivo(s) seleccionados</span><button type="button" className="btn" onClick={()=>setShowVault(false)}>Usar selección</button></div></div></div>}
   <p className="muted campaign-note">Antes de enviar o programar, MAISON muestra una confirmación con el modelo y la audiencia. Las campañas se ejecutan en la cuenta OnlyFans conectada.</p>
  </div>
 }
