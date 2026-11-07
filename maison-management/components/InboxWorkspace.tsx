@@ -196,7 +196,7 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
     if (!selectedChat || !modelId || (!draft.trim() && selectedMedia.length === 0)) return
     const chatId = String(selectedChat.fan?.id || '')
     const price = ppvPrice ? Number(ppvPrice) : 0
-    if (price && (price < 3 || price > 200)) {
+    if (price && (!Number.isInteger(price) || price < 3 || price > 200)) {
       setError('El precio PPV debe estar entre 3 y 200 USD.')
       return
     }
@@ -331,7 +331,7 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
             {scripts.length>0&&<div className="inbox-script-row"><label>Guiones</label><select defaultValue="" onChange={e=>{const script=scripts.find(item=>item.id===e.target.value);if(script)setDraft(current=>current?current+'\\n'+script.body:script.body);e.target.value=''}}><option value="">Insertar respuesta guardada…</option>{scripts.map(script=><option key={script.id} value={script.id}>{script.category} · {script.title}</option>)}</select></div>}
             <textarea value={draft} onChange={e => setDraft(e.target.value)} placeholder="Escribe una respuesta…" rows={3}/>
             {selectedMedia.length>0&&<div className="inbox-selected-media">{selectedMedia.map(id=><button type="button" key={id} className="inbox-media-chip" onClick={()=>setSelectedMedia(v=>v.filter(x=>x!==id))}>Archivo #{id} ×</button>)}</div>}
-            <div className="inbox-compose-bottom"><button type="button" className="btn-ghost" onClick={openVault}>＋ Añadir del vault</button><label className="inbox-ppv-field">Precio PPV (USD)<input type="number" min="3" max="200" step="0.01" value={ppvPrice} onChange={e => setPpvPrice(e.target.value)} placeholder="Gratis"/></label><label className="inbox-check"><input type="checkbox" checked={lockedText} onChange={e => setLockedText(e.target.checked)}/> Bloquear texto</label><button className="btn" disabled={sending || (!draft.trim() && selectedMedia.length===0)}>{sending ? 'Enviando…' : 'Enviar mensaje'}</button></div>
+            <div className="inbox-compose-bottom"><button type="button" className="btn-ghost" onClick={openVault}>＋ Añadir del vault</button><label className="inbox-ppv-field">Precio PPV (USD)<input type="number" min="3" max="200" step="1" value={ppvPrice} onChange={e => setPpvPrice(e.target.value)} placeholder="Gratis"/></label><label className="inbox-check"><input type="checkbox" checked={lockedText} onChange={e => setLockedText(e.target.checked)}/> Bloquear texto</label><button className="btn" disabled={sending || (!draft.trim() && selectedMedia.length===0)}>{sending ? 'Enviando…' : 'Enviar mensaje'}</button></div>
           </form>
           <form className="inbox-note-form" onSubmit={saveNote}><input value={noteDraft} onChange={e=>setNoteDraft(e.target.value)} placeholder="Añadir nota interna para el equipo…"/><button className="btn-ghost" disabled={!noteDraft.trim()||!conversationId}>Guardar nota</button></form>
         </>}
