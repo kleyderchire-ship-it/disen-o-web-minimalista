@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   if ('error' in context) return context.error
   if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
 
-  const initialStatus = saveForLater ? 'draft' : 'publishing'
+  const initialStatus = 'draft'
   const { data: record, error: insertError } = await context.supabase.from('publications').insert({
     model_id: modelId,
     created_by: context.user.id,
@@ -37,6 +37,8 @@ export async function POST(request: Request) {
   if (insertError || !record) return NextResponse.json({ error: 'No se pudo guardar el registro de publicación.', detail: insertError?.message }, { status: 500 })
 
   if (saveForLater) return NextResponse.json({ saved: true, publicationId: record.id, status: 'draft' })
+  const { error: publishLockError } = await context.supabase.from('publications').update({ status: 'publishing', updated_at: new Date().toISOString() }).eq('id', record.id)
+  if (publishLockError) return NextResponse.json({ error: 'No se pudo preparar el registro para publicar.', detail: publishLockError.message }, { status: 500 })
 
   const payload: Record<string, unknown> = {}
   if (type === 'post') {
