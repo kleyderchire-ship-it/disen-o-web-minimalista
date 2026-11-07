@@ -88,7 +88,7 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
    <div className="field"><label>Modelo</label><select value={modelId} onChange={e=>setModelId(e.target.value)}>{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
    <div className="field"><label>Tipo de archivo</label><select value={type} onChange={e=>setType(e.target.value)}><option value="">Todos</option><option value="photo">Fotos</option><option value="video">Videos</option><option value="gif">GIF</option><option value="audio">Audio</option></select></div>
    <div className="field vault-search"><label>Buscar</label><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')load()}} placeholder="Buscar contenido…"/></div>
-   <button className="btn-ghost" onClick={load} disabled={loading}>{loading?'Cargando…':'Buscar / actualizar'}</button>
+   <button className="btn-ghost" onClick={() => load()} disabled={loading}>{loading?'Cargando…':'Buscar / actualizar'}</button>
   </div>
   {error&&<div className="notice">{error}</div>}
   {loading&&<div className="empty">Sincronizando el vault de OnlyFans…</div>}
