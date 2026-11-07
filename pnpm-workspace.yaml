@@ -1,3 +1,7 @@
+packages:
+  - "."
+  - "maison-management"
+
 pmOnFail: ignore
 
 minimumReleaseAgeExclude:
