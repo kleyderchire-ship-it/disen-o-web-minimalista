@@ -23,6 +23,7 @@ export async function POST(request: Request) {
   if(!/^[0-9a-f-]{36}$/i.test(modelId)||name.length<2||name.length>64)return NextResponse.json({error:'Indica un modelo y un nombre de etiqueta de 2 a 64 caracteres.'},{status:400})
   const context=await getFansApiContext(request,modelId)
   if('error' in context)return context.error
+  if(context.role==='chatter')return NextResponse.json({error:'Solo administradores y supervisores pueden crear etiquetas.'},{status:403})
   if(!('accountId' in context))return NextResponse.json({error:'Cuenta no disponible.'},{status:409})
   const result=await fansApiRequest(`https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/user-lists`,context.apiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})})
   if(!result.response.ok)return NextResponse.json({error:'No se pudo crear la etiqueta.',provider:result.payload},{status:result.response.status})
