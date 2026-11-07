@@ -108,7 +108,6 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
     setLoadingMessages(true)
     setError('')
     try {
-      const { data: userData } = await supabase.auth.getUser()
       const fan = chat.fan || {}
       const { data: conversation } = await supabase.from('inbox_conversations').upsert({
         model_id: modelId,
