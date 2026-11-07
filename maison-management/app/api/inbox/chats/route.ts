@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   if (allowedFilters.has(filter)) params.set('filter', filter)
   if (query.trim()) params.set('query', query.trim().slice(0, 120))
 
-  const url = `https://app.onlyfansapi.com/api/${encodeURIComponent(context.accountId)}/chats?${params.toString()}`
+  const url = `https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/chats?${params.toString()}`
   const result = await fansApiRequest(url, context.apiKey)
   if (!result.response.ok) return NextResponse.json({ error: 'Fans API no pudo cargar la bandeja.', provider: result.payload }, { status: result.response.status })
   return NextResponse.json(result.payload)
