@@ -112,44 +112,48 @@ create index if not exists sales_model_date_idx on public.sales(model_id,occurre
 create index if not exists publications_model_date_idx on public.publications(model_id,created_at desc);
 create index if not exists publications_schedule_idx on public.publications(status,scheduled_at);
 
-create or replace function public.current_app_role()
+create schema if not exists private;
+
+create or replace function private.current_app_role()
 returns public.app_role
 language sql stable security definer
-set search_path = public
+set search_path = ''
 as $$
-  select role from public.profiles
-  where id = (select auth.uid()) and active = true
+  select p.role from public.profiles p
+  where p.id = (select auth.uid()) and p.active = true
 $$;
 
-create or replace function public.can_access_model(target_model uuid)
+create or replace function private.can_access_model(target_model uuid)
 returns boolean
 language sql stable security definer
-set search_path = public
+set search_path = ''
 as $$
   select
-    public.current_app_role() in ('admin','supervisor')
+    private.current_app_role() in ('admin','supervisor')
     or exists (
       select 1 from public.model_assignments ma
       where ma.model_id = target_model and ma.user_id = (select auth.uid())
     )
 $$;
 
-create or replace function public.touch_updated_at()
-returns trigger language plpgsql set search_path = public
+create or replace function private.touch_updated_at()
+returns trigger
+language plpgsql
+set search_path = ''
 as $$ begin new.updated_at = now(); return new; end $$;
 
 drop trigger if exists profiles_touch_updated_at on public.profiles;
 create trigger profiles_touch_updated_at before update on public.profiles
-for each row execute function public.touch_updated_at();
+for each row execute function private.touch_updated_at();
 drop trigger if exists models_touch_updated_at on public.models;
 create trigger models_touch_updated_at before update on public.models
-for each row execute function public.touch_updated_at();
+for each row execute function private.touch_updated_at();
 drop trigger if exists platform_accounts_touch_updated_at on public.platform_accounts;
 create trigger platform_accounts_touch_updated_at before update on public.platform_accounts
-for each row execute function public.touch_updated_at();
+for each row execute function private.touch_updated_at();
 drop trigger if exists publications_touch_updated_at on public.publications;
 create trigger publications_touch_updated_at before update on public.publications
-for each row execute function public.touch_updated_at();
+for each row execute function private.touch_updated_at();
 
 alter table public.profiles enable row level security;
 alter table public.models enable row level security;
@@ -162,70 +166,70 @@ alter table public.audit_logs enable row level security;
 
 drop policy if exists "profiles read own or managers" on public.profiles;
 create policy "profiles read own or managers" on public.profiles for select to authenticated
-using (id = (select auth.uid()) or public.current_app_role() in ('admin','supervisor'));
+using (id = (select auth.uid()) or private.current_app_role() in ('admin','supervisor'));
 drop policy if exists "admins manage profiles" on public.profiles;
 create policy "admins manage profiles" on public.profiles for all to authenticated
-using (public.current_app_role() = 'admin') with check (public.current_app_role() = 'admin');
+using (private.current_app_role() = 'admin') with check (private.current_app_role() = 'admin');
 
 drop policy if exists "models visible by role" on public.models;
 create policy "models visible by role" on public.models for select to authenticated
-using (public.can_access_model(id));
+using (private.can_access_model(id));
 drop policy if exists "managers manage models" on public.models;
 create policy "managers manage models" on public.models for all to authenticated
-using (public.current_app_role() in ('admin','supervisor'))
-with check (public.current_app_role() in ('admin','supervisor'));
+using (private.current_app_role() in ('admin','supervisor'))
+with check (private.current_app_role() in ('admin','supervisor'));
 
 drop policy if exists "assignments visible to relevant users" on public.model_assignments;
 create policy "assignments visible to relevant users" on public.model_assignments for select to authenticated
-using (user_id = (select auth.uid()) or public.current_app_role() in ('admin','supervisor'));
+using (user_id = (select auth.uid()) or private.current_app_role() in ('admin','supervisor'));
 drop policy if exists "managers manage assignments" on public.model_assignments;
 create policy "managers manage assignments" on public.model_assignments for all to authenticated
-using (public.current_app_role() in ('admin','supervisor'))
-with check (public.current_app_role() in ('admin','supervisor'));
+using (private.current_app_role() in ('admin','supervisor'))
+with check (private.current_app_role() in ('admin','supervisor'));
 
 drop policy if exists "platform accounts managers read" on public.platform_accounts;
 create policy "platform accounts managers read" on public.platform_accounts for select to authenticated
-using (public.current_app_role() in ('admin','supervisor') and public.can_access_model(model_id));
+using (private.current_app_role() in ('admin','supervisor') and private.can_access_model(model_id));
 drop policy if exists "admins manage platform accounts" on public.platform_accounts;
 create policy "admins manage platform accounts" on public.platform_accounts for all to authenticated
-using (public.current_app_role() = 'admin') with check (public.current_app_role() = 'admin');
+using (private.current_app_role() = 'admin') with check (private.current_app_role() = 'admin');
 
 drop policy if exists "fans visible by assignment" on public.fan_events;
 create policy "fans visible by assignment" on public.fan_events for select to authenticated
-using (public.can_access_model(model_id));
+using (private.can_access_model(model_id));
 drop policy if exists "assigned chatters record fans" on public.fan_events;
 create policy "assigned chatters record fans" on public.fan_events for insert to authenticated
-with check (public.can_access_model(model_id) and chatter_id = (select auth.uid()));
+with check (private.can_access_model(model_id) and chatter_id = (select auth.uid()));
 drop policy if exists "managers update fans" on public.fan_events;
 create policy "managers update fans" on public.fan_events for update to authenticated
-using (public.current_app_role() in ('admin','supervisor'))
-with check (public.current_app_role() in ('admin','supervisor'));
+using (private.current_app_role() in ('admin','supervisor'))
+with check (private.current_app_role() in ('admin','supervisor'));
 
 drop policy if exists "sales visible by assignment" on public.sales;
 create policy "sales visible by assignment" on public.sales for select to authenticated
-using (public.can_access_model(model_id));
+using (private.can_access_model(model_id));
 drop policy if exists "assigned chatters record sales" on public.sales;
 create policy "assigned chatters record sales" on public.sales for insert to authenticated
-with check (public.can_access_model(model_id) and chatter_id = (select auth.uid()));
+with check (private.can_access_model(model_id) and chatter_id = (select auth.uid()));
 drop policy if exists "managers update sales" on public.sales;
 create policy "managers update sales" on public.sales for update to authenticated
-using (public.current_app_role() in ('admin','supervisor'))
-with check (public.current_app_role() in ('admin','supervisor'));
+using (private.current_app_role() in ('admin','supervisor'))
+with check (private.current_app_role() in ('admin','supervisor'));
 
 drop policy if exists "publications visible by assignment" on public.publications;
 create policy "publications visible by assignment" on public.publications for select to authenticated
-using (public.can_access_model(model_id));
+using (private.can_access_model(model_id));
 drop policy if exists "assigned team create drafts" on public.publications;
 create policy "assigned team create drafts" on public.publications for insert to authenticated
-with check (public.can_access_model(model_id) and created_by = (select auth.uid()) and status = 'draft');
+with check (private.can_access_model(model_id) and created_by = (select auth.uid()) and status = 'draft');
 drop policy if exists "managers update publications" on public.publications;
 create policy "managers update publications" on public.publications for update to authenticated
-using (public.current_app_role() in ('admin','supervisor'))
-with check (public.current_app_role() in ('admin','supervisor'));
+using (private.current_app_role() in ('admin','supervisor'))
+with check (private.current_app_role() in ('admin','supervisor'));
 
 drop policy if exists "audit logs managers read" on public.audit_logs;
 create policy "audit logs managers read" on public.audit_logs for select to authenticated
-using (public.current_app_role() in ('admin','supervisor'));
+using (private.current_app_role() in ('admin','supervisor'));
 -- Audit log inserts are reserved for trusted server-side code using the service role.
 
 -- Bootstrap note: after the first administrator signs up, set their role from
@@ -233,13 +237,14 @@ using (public.current_app_role() in ('admin','supervisor'));
 -- update public.profiles set role = 'admin' where id = '<AUTH_USER_UUID>';
 
 
--- Create a profile automatically for each new Supabase Auth user.
-create or replace function public.handle_new_user()
+-- Keep the signup trigger's SECURITY DEFINER function outside exposed schemas.
+create schema if not exists private;
+create or replace function private.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
-as $$
+set search_path = ''
+as $
 begin
   insert into public.profiles (id, full_name, role)
   values (
@@ -250,12 +255,31 @@ begin
   on conflict (id) do nothing;
   return new;
 end;
-$$;
+$;
+revoke all on function private.handle_new_user() from public, anon, authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
-for each row execute function public.handle_new_user();
+for each row execute function private.handle_new_user();
+
+revoke all on function private.current_app_role() from public, anon;
+revoke all on function private.can_access_model(uuid) from public, anon;
+grant usage on schema private to authenticated;
+grant execute on function private.current_app_role() to authenticated;
+grant execute on function private.can_access_model(uuid) to authenticated;
+
+-- Explicit least-privilege Data API grants; RLS still filters each row.
+grant select, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.models to authenticated;
+grant select, insert, update, delete on public.model_assignments to authenticated;
+grant select, insert, update, delete on public.platform_accounts to authenticated;
+grant select, insert, update on public.fan_events to authenticated;
+grant select, insert, update on public.sales to authenticated;
+grant select, insert, update on public.publications to authenticated;
+grant select on public.audit_logs to authenticated;
+grant all on all tables in schema public to service_role;
+grant usage, select on all sequences in schema public to service_role;
 
 -- Private media bucket. Store files under <model-uuid>/<filename>.
 insert into storage.buckets (id, name, public)
@@ -266,18 +290,18 @@ drop policy if exists "assigned team reads model media" on storage.objects;
 create policy "assigned team reads model media" on storage.objects for select to authenticated
 using (
   bucket_id = 'maison-content'
-  and public.can_access_model(((storage.foldername(name))[1])::uuid)
+  and private.can_access_model(((storage.foldername(name))[1])::uuid)
 );
 drop policy if exists "assigned team uploads model media" on storage.objects;
 create policy "assigned team uploads model media" on storage.objects for insert to authenticated
 with check (
   bucket_id = 'maison-content'
-  and public.can_access_model(((storage.foldername(name))[1])::uuid)
+  and private.can_access_model(((storage.foldername(name))[1])::uuid)
 );
 drop policy if exists "managers delete model media" on storage.objects;
 create policy "managers delete model media" on storage.objects for delete to authenticated
 using (
   bucket_id = 'maison-content'
-  and public.current_app_role() in ('admin','supervisor')
-  and public.can_access_model(((storage.foldername(name))[1])::uuid)
+  and private.current_app_role() in ('admin','supervisor')
+  and private.can_access_model(((storage.foldername(name))[1])::uuid)
 );
