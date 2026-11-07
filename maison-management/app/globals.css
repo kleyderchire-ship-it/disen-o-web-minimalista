@@ -50,3 +50,6 @@
 
 
 .welcome-automation{padding:20px}.welcome-automation textarea{background:#0c0f10;border:1px solid var(--line);border-radius:8px;color:white;padding:11px;font:inherit;font-size:12px;resize:vertical}
+
+
+.fan-tag-toolbar{display:flex;align-items:end;gap:9px;flex-wrap:wrap;padding:13px;margin-bottom:14px}.fan-tag-toolbar .field{min-width:160px;flex:1}.fan-tag-toolbar input,.fan-tag-toolbar select{background:#0c0f10;border:1px solid var(--line);border-radius:8px;color:white;padding:10px;width:100%;min-width:0}.fan-tag-toolbar button{white-space:nowrap}
