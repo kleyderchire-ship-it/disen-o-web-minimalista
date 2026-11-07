@@ -16,6 +16,7 @@ export async function POST(request: Request) {
   if (!/^[0-9a-f-]{36}$/i.test(modelId) || !type) return NextResponse.json({ error: 'Modelo o tipo de publicación no válido.' }, { status: 400 })
   if (type === 'post' && !text) return NextResponse.json({ error: 'Las publicaciones necesitan texto.' }, { status: 400 })
   if (type === 'story' && mediaFiles.length === 0) return NextResponse.json({ error: 'Las historias necesitan al menos un archivo del vault.' }, { status: 400 })
+  if (saveForLater && scheduledDate) return NextResponse.json({ error: 'Elige guardar como borrador o programar, no ambas acciones.' }, { status: 400 })
   if (scheduledDate && (type !== 'post' || Number.isNaN(Date.parse(scheduledDate)) || Date.parse(scheduledDate) <= Date.now())) {
     return NextResponse.json({ error: 'La programación requiere una fecha futura y solo está disponible para publicaciones.' }, { status: 400 })
   }
@@ -36,7 +37,6 @@ export async function POST(request: Request) {
   }).select('id').single()
   if (insertError || !record) return NextResponse.json({ error: 'No se pudo guardar el registro de publicación.', detail: insertError?.message }, { status: 500 })
 
-  if (saveForLater) return NextResponse.json({ saved: true, publicationId: record.id, status: 'draft' })
   const { error: publishLockError } = await context.supabase.from('publications').update({ status: 'publishing', updated_at: new Date().toISOString() }).eq('id', record.id)
   if (publishLockError) return NextResponse.json({ error: 'No se pudo preparar el registro para publicar.', detail: publishLockError.message }, { status: 500 })
 
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     payload.text = text
     if (mediaFiles.length) payload.mediaFiles = mediaFiles
     if (scheduledDate) payload.scheduledDate = new Date(scheduledDate).toISOString()
+    if (saveForLater) payload.saveForLater = true
     if (body?.blockBannedWords !== false) payload.blockBannedWords = 'risky'
   } else {
     payload.mediaFiles = mediaFiles.map(String)
@@ -66,14 +67,14 @@ export async function POST(request: Request) {
 
   const responseData: any = provider.payload
   const providerId = responseData?.data?.id ?? responseData?.id ?? null
-  const status = scheduledDate ? 'scheduled' : 'published'
+  const status = saveForLater ? 'draft' : scheduledDate ? 'scheduled' : 'published'
   const { error: updateError } = await context.supabase.from('publications').update({
     provider_post_id: providerId === null ? null : String(providerId),
     status,
-    published_at: scheduledDate ? null : new Date().toISOString(),
+    published_at: scheduledDate || saveForLater ? null : new Date().toISOString(),
     last_error: null,
     updated_at: new Date().toISOString(),
   }).eq('id', record.id)
   if (updateError) return NextResponse.json({ warning: 'El proveedor ejecutó la publicación, pero MAISON no pudo actualizar el registro.', publicationId: record.id, provider: provider.payload }, { status: 207 })
-  return NextResponse.json({ ok: true, status, publicationId: record.id, provider: provider.payload })
+  return NextResponse.json({ ok: true, saved: saveForLater, status, publicationId: record.id, provider: provider.payload })
 }
