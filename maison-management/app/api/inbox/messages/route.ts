@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const modelId = searchParams.get('modelId') || ''
   const chatId = searchParams.get('chatId') || ''
-  if (!/^[0-9a-f-]{36}$/i.test(modelId) || !/^\\d{1,32}$/.test(chatId)) {
+  if (!/^[0-9a-f-]{36}$/i.test(modelId) || !/^\d{1,32}$/.test(chatId)) {
     return NextResponse.json({ error: 'Modelo o conversación no válidos.' }, { status: 400 })
   }
 
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 50)))
   const params = new URLSearchParams({ limit: String(limit), order: 'desc', skip_users: 'none' })
   const firstId = searchParams.get('first_id')
-  if (firstId && /^\\d{1,32}$/.test(firstId)) params.set('first_id', firstId)
+  if (firstId && /^\d{1,32}$/.test(firstId)) params.set('first_id', firstId)
 
   const url = `https://app.onlyfansapi.com/api/${encodeURIComponent(context.accountId)}/chats/${encodeURIComponent(chatId)}/messages?${params.toString()}`
   const result = await fansApiRequest(url, context.apiKey)
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   const price = body?.price == null ? 0 : Number(body.price)
   const lockedText = body?.lockedText === true
 
-  if (!/^[0-9a-f-]{36}$/i.test(modelId) || !/^\\d{1,32}$/.test(chatId)) return NextResponse.json({ error: 'Modelo o conversación no válidos.' }, { status: 400 })
+  if (!/^[0-9a-f-]{36}$/i.test(modelId) || !/^\d{1,32}$/.test(chatId)) return NextResponse.json({ error: 'Modelo o conversación no válidos.' }, { status: 400 })
   if (!text && mediaFiles.length === 0) return NextResponse.json({ error: 'Escribe un mensaje o selecciona contenido.' }, { status: 400 })
   if (!Number.isFinite(price) || (price !== 0 && (price < 3 || price > 200))) return NextResponse.json({ error: 'El precio PPV debe ser 0 o estar entre 3 y 200 USD.' }, { status: 400 })
   if (price > 0 && mediaFiles.length === 0 && !lockedText) return NextResponse.json({ error: 'Un PPV con precio necesita contenido multimedia o texto bloqueado.' }, { status: 400 })
