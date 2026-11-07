@@ -38,6 +38,7 @@ export default function TeamWorkspace({models,supabase,role}:{models:Model[];sup
   finally{setLoading(false)}
  }
  useEffect(()=>{load()},[])
+ useEffect(()=>{if(!selectedModel&&models.length)setSelectedModel(models[0].id)},[models,selectedModel])
  async function invite(){
   setBusy('invite');setError('');setNotice('')
   try{
