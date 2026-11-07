@@ -231,3 +231,53 @@ using (public.current_app_role() in ('admin','supervisor'));
 -- Bootstrap note: after the first administrator signs up, set their role from
 -- the SQL editor using their auth.users UUID:
 -- update public.profiles set role = 'admin' where id = '<AUTH_USER_UUID>';
+
+
+-- Create a profile automatically for each new Supabase Auth user.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, full_name, role)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
+    'chatter'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();
+
+-- Private media bucket. Store files under <model-uuid>/<filename>.
+insert into storage.buckets (id, name, public)
+values ('maison-content', 'maison-content', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "assigned team reads model media" on storage.objects;
+create policy "assigned team reads model media" on storage.objects for select to authenticated
+using (
+  bucket_id = 'maison-content'
+  and public.can_access_model(((storage.foldername(name))[1])::uuid)
+);
+drop policy if exists "assigned team uploads model media" on storage.objects;
+create policy "assigned team uploads model media" on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'maison-content'
+  and public.can_access_model(((storage.foldername(name))[1])::uuid)
+);
+drop policy if exists "managers delete model media" on storage.objects;
+create policy "managers delete model media" on storage.objects for delete to authenticated
+using (
+  bucket_id = 'maison-content'
+  and public.current_app_role() in ('admin','supervisor')
+  and public.can_access_model(((storage.foldername(name))[1])::uuid)
+);
