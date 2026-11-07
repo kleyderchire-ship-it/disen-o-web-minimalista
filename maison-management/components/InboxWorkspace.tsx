@@ -13,7 +13,7 @@ type Chat = {
   hasUnreadTips?: boolean
   isMutedNotifications?: boolean
 }
-type VaultAsset = { id: number | string; type: string; files?: { thumb?: { url?: string } | null; preview?: { url?: string } | null; full?: { url?: string } } }
+type VaultAsset = { id: number | string; type: string; files?: { thumb?: { url?: string } | null; preview?: { url?: string } | null; full?: { url?: string } }; isReady?: boolean; hasError?: boolean }
 type MessageMedia = { id?: number | string; type?: string; files?: { thumb?: { url?: string } | null; preview?: { url?: string } | null; full?: { url?: string } } }
 type Message = {
   id?: string | number
