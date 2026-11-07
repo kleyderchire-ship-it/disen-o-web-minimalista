@@ -78,3 +78,6 @@
 
 
 .performance-filter{display:flex;align-items:end;gap:10px;flex-wrap:wrap;padding:14px;margin:18px 0}.performance-filter .field{min-width:150px;flex:1}.performance-filter input{background:#0c0f10;border:1px solid var(--line);border-radius:8px;color:white;padding:9px;width:100%}.performance-kpis{margin-bottom:18px}.performance-note{font-size:10px;line-height:1.5;margin-top:12px}
+
+
+.inbox-load-more,.inbox-load-older,.vault-load-more{display:flex;justify-content:center;width:100%;padding:10px;margin:8px 0}.inbox-load-older{position:sticky;top:0;z-index:2;background:#171719;border:1px solid var(--line);border-radius:8px}.vault-load-more{margin:18px 0}.publisher-vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px;max-height:55vh;overflow:auto;padding:8px}.publisher-vault-modal{width:min(850px,96vw);max-height:90vh;overflow:auto}
