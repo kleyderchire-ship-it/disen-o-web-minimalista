@@ -12,7 +12,8 @@ export async function GET(request: Request) {
   }
 
   const context = await getFansApiContext(request, modelId)
-  if ('error' in context) return context.error;
+  if ('error' in context) return context.error
+  if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 });
   if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
 
   const { data: assignment } = await context.supabase.from('inbox_conversations').select('assigned_to').eq('model_id',modelId).eq('provider_chat_id',chatId).maybeSingle()
