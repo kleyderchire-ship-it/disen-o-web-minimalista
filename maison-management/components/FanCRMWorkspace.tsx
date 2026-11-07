@@ -13,7 +13,7 @@ type Fan={
 }
 const usd=(v:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(v||0)
 
-export default function FanCRMWorkspace({models,supabase}:{models:Model[];supabase:SupabaseClient}){
+export default function FanCRMWorkspace({models,supabase,role}:{models:Model[];supabase:SupabaseClient;role:string}){
  const [modelId,setModelId]=useState('')
  const [fans,setFans]=useState<Fan[]>([])
  const [type,setType]=useState('all')
@@ -24,6 +24,7 @@ export default function FanCRMWorkspace({models,supabase}:{models:Model[];supaba
  const [hasMore,setHasMore]=useState(false)
  const [loading,setLoading]=useState(false)
  const [error,setError]=useState('')
+ const [notice,setNotice]=useState('')
  const [lists,setLists]=useState<FanList[]>([])
  const [selectedList,setSelectedList]=useState('')
  const [newTag,setNewTag]=useState('')
@@ -44,17 +45,17 @@ export default function FanCRMWorkspace({models,supabase}:{models:Model[];supaba
  }
  useEffect(()=>{if(modelId){setSelectedList('');setSelectedFanIds([]);loadTags()}},[modelId])
  async function createTag(){
-  if(!newTag.trim())return
+  if(role==='chatter'||!newTag.trim())return
   setTagBusy(true);setError('')
   try{
    const {data}=await supabase.auth.getSession()
    const response=await fetch('/api/fans/lists',{method:'POST',headers:{Authorization:'Bearer '+(data.session?.access_token||''),'Content-Type':'application/json'},body:JSON.stringify({modelId,name:newTag.trim()})})
    const payload=await response.json()
    if(!response.ok)throw new Error(payload.error||'No se pudo crear la etiqueta.')
-   setNewTag('');setError('')
+   setNewTag('');setError('');setNotice('Etiqueta creada en OnlyFans.')
    if(payload?.data?.id!==undefined)setSelectedList(String(payload.data.id))
    await loadTags()
-  }catch(e){setError(e instanceof Error?e.message:'No se pudo crear la etiqueta.')}
+  }catch(e){setError(e instanceof Error?e.message:'No se pudo crear la etiqueta.');setNotice('')}
   finally{setTagBusy(false)}
  }
  async function tagSelected(){
@@ -67,9 +68,11 @@ export default function FanCRMWorkspace({models,supabase}:{models:Model[];supaba
    const response=await fetch('/api/fans/lists/'+encodeURIComponent(selectedList)+'/users',{method:'POST',headers:{Authorization:'Bearer '+(data.session?.access_token||''),'Content-Type':'application/json'},body:JSON.stringify({modelId,ids:selectedFanIds})})
    const payload=await response.json()
    if(!response.ok)throw new Error(payload.error||'No se pudieron asignar las etiquetas.')
+   const addedCount=selectedFanIds.length
    setSelectedFanIds([])
-   setError('')
-  }catch(e){setError(e instanceof Error?e.message:'No se pudo asignar la etiqueta.')}
+   setError('');setNotice('Se agregaron '+addedCount+' fan(s) a la etiqueta.')
+   await loadTags()
+  }catch(e){setError(e instanceof Error?e.message:'No se pudo asignar la etiqueta.');setNotice('')}
   finally{setTagBusy(false)}
  }
  async function load(nextOffset=0){
@@ -102,8 +105,8 @@ export default function FanCRMWorkspace({models,supabase}:{models:Model[];supaba
    <div className="field fan-crm-search"><label>Buscar fan</label><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')load(0)}} placeholder="Nombre o usuario…"/></div>
    <button className="btn" onClick={()=>load(0)} disabled={loading}>{loading?'Buscando…':'Buscar fans'}</button>
   </div>
-  <div className="panel fan-tag-toolbar"><div className="field"><label>Crear etiqueta personalizada</label><input value={newTag} onChange={e=>setNewTag(e.target.value)} placeholder="Ej. VIP, Compradores frecuentes…"/></div><button className="btn-ghost" onClick={createTag} disabled={tagBusy||!newTag.trim()}>Crear etiqueta</button><div className="field"><label>Etiqueta de destino</label><select value={selectedList} onChange={e=>setSelectedList(e.target.value)}><option value="">Selecciona etiqueta</option>{lists.filter(x=>x.type==='custom').map(x=><option key={String(x.id)} value={String(x.id)}>{x.name} ({x.usersCount||0})</option>)}</select></div><button className="btn" onClick={tagSelected} disabled={tagBusy||!selectedList||!selectedFanIds.length}>Agregar {selectedFanIds.length||''} seleccionados</button></div>
-  {error&&<div className="notice inbox-feedback-error">{error}</div>}
+  <div className="panel fan-tag-toolbar">{role!=='chatter'&&<><div className="field"><label>Crear etiqueta personalizada</label><input value={newTag} onChange={e=>setNewTag(e.target.value)} placeholder="Ej. VIP, Compradores frecuentes…"/></div><button className="btn-ghost" onClick={createTag} disabled={tagBusy||!newTag.trim()}>Crear etiqueta</button></>}<div className="field"><label>Etiqueta de destino</label><select value={selectedList} onChange={e=>setSelectedList(e.target.value)}><option value="">Selecciona etiqueta</option>{lists.filter(x=>x.type==='custom').map(x=><option key={String(x.id)} value={String(x.id)}>{x.name} ({x.usersCount||0})</option>)}</select></div><button className="btn" onClick={tagSelected} disabled={tagBusy||!selectedList||!selectedFanIds.length}>Agregar {selectedFanIds.length||''} seleccionados</button></div>
+  {error&&<div className="notice inbox-feedback-error">{error}</div>}{notice&&<div className="notice inbox-feedback-ok">{notice}</div>}
   <div className="section-head"><div><h2>Directorio de fans en vivo</h2><p className="page-intro">Datos de suscripción, gasto acumulado y actividad desde OnlyFans.</p></div><span className="date-pill">{fans.length} EN ESTA PÁGINA</span></div>
   <div className="panel table-wrap"><table className="data-table"><thead><tr><th>SELECCIONAR</th><th>FAN</th><th>ESTADO</th><th>GASTO TOTAL</th><th>PROPINAS</th><th>MENSAJES</th><th>DURACIÓN</th><th>ÚLTIMA VEZ</th></tr></thead><tbody>
    {fans.map(fan=>{const active=Boolean(fan.subscribedOn&&!fan.subscribedOnExpiredNow);return <tr key={String(fan.id)}><td><input type="checkbox" checked={selectedFanIds.includes(String(fan.id))} onChange={e=>setSelectedFanIds(current=>e.target.checked?[...current,String(fan.id)]:current.filter(id=>id!==String(fan.id)))}/></td><td><div className="model-cell">{fan.avatarThumbs?.c144||fan.avatar?<img className="model-avatar fan-avatar-img" src={fan.avatarThumbs?.c144||fan.avatar} alt=""/>:<span className="model-avatar">{(fan.username||fan.name||'?').slice(0,1).toUpperCase()}</span>}<div><strong>{fan.displayName||fan.name||fan.username||'Fan'}</strong><small className="muted">@{fan.username||fan.id}</small></div></div></td><td><span className={'status '+(!active?'pending':'')}>{active?'Activa':'Expirada / no activa'}</span></td><td className="gold">{usd(totalSpend(fan))}</td><td>{usd(Number(fan.subscribedOnData?.tipsSumm||0))}</td><td>{usd(Number(fan.subscribedOnData?.messagesSumm||0))}</td><td>{fan.subscribedOnDuration||'—'}</td><td>{fan.lastSeen?new Date(fan.lastSeen).toLocaleDateString():'—'}</td></tr>})}
