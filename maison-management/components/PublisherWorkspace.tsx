@@ -29,7 +29,7 @@ export default function PublisherWorkspace({models,supabase}:{models:Model[];sup
    const response=await fetch('/api/content/publish',{method:'POST',headers:{Authorization:'Bearer '+(data.session?.access_token||''),'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({modelId,type,text:text.trim(),mediaFiles,scheduledDate:date?.toISOString(),saveForLater})})
    const payload=await response.json()
    if(!response.ok&&response.status!==207)throw new Error(payload.error||'No se pudo publicar.')
-   setNotice(payload.warning|| (saveForLater?'Borrador guardado en MAISON.':scheduled?'Publicación programada correctamente.':type==='story'?'Historia publicada en OnlyFans.':'Publicación enviada a OnlyFans.'))
+   setNotice(payload.warning|| (saveForLater?'Borrador guardado en OnlyFans y MAISON.':scheduled?'Publicación programada correctamente.':type==='story'?'Historia publicada en OnlyFans.':'Publicación enviada a OnlyFans.'))
    if(!saveForLater){setText('');setMediaIds('');setScheduled('')}
   }catch(e){setError(e instanceof Error?e.message:'Error al publicar contenido.')}
   finally{setBusy(false)}
