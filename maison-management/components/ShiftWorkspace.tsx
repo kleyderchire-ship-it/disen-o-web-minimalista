@@ -12,6 +12,7 @@ const duration=(start:string,end:string|null)=>{const ms=(new Date(end||Date.now
 
 export default function ShiftWorkspace({models,supabase,role}:{models:Model[];supabase:SupabaseClient;role:string}){
  const [profiles,setProfiles]=useState<Profile[]>([])
+ const [availableChatters,setAvailableChatters]=useState<Profile[]>([])
  const [shifts,setShifts]=useState<Shift[]>([])
  const [entries,setEntries]=useState<Entry[]>([])
  const [modelId,setModelId]=useState('')
@@ -37,12 +38,19 @@ export default function ShiftWorkspace({models,supabase,role}:{models:Model[];su
    if(p.error)throw p.error;if(s.error)throw s.error;if(e.error)throw e.error
    setProfiles((p.data||[]) as Profile[]);setShifts((s.data||[]) as Shift[]);setEntries((e.data||[]) as Entry[])
    setCurrentUserId(u.data.user?.id||'')
-   if(!modelId&&models.length)setModelId(models[0].id)
-   if(!userId&&p.data?.length)setUserId(manager?((p.data.find((x:any)=>x.role==='chatter')?.id)||''):(u.data.user?.id||''))
+   if(manager&&modelId){
+    const {data:assignments,error:assignmentError}=await supabase.from('model_assignments').select('user_id').eq('model_id',modelId)
+    if(assignmentError)throw assignmentError
+    const ids=(assignments||[]).map(x=>x.user_id)
+    const assigned=(p.data||[]).filter((x:any)=>x.role==='chatter'&&ids.includes(x.id)) as Profile[]
+    setAvailableChatters(assigned)
+    if(!assigned.some(x=>x.id===userId))setUserId(assigned[0]?.id||'')
+   }else if(!manager){setUserId(u.data.user?.id||'')}
   }catch(e){setError(e instanceof Error?e.message:'No se pudo cargar el calendario de turnos.')}
   finally{setLoading(false)}
  }
- useEffect(()=>{load()},[])
+ useEffect(()=>{if(!modelId&&models.length)setModelId(models[0].id)},[models,modelId])
+ useEffect(()=>{if(manager){if(modelId)load()}else load()},[modelId,manager])
  async function createShift(event:React.FormEvent){
   event.preventDefault()
   const a=new Date(start),b=new Date(end)
@@ -70,11 +78,11 @@ export default function ShiftWorkspace({models,supabase,role}:{models:Model[];su
  return <div className="shift-workspace">
   {manager&&<div className="panel shift-schedule-form"><div className="section-head"><div><h2>Programar turno</h2><p className="page-intro">Asigna un chatter a una modelo y define su horario.</p></div></div><form className="form-grid" onSubmit={createShift}>
    <div className="field"><label>Modelo</label><select value={modelId} onChange={e=>setModelId(e.target.value)}>{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
-   <div className="field"><label>Chatter</label><select value={userId} onChange={e=>setUserId(e.target.value)}>{profiles.filter(p=>p.role==='chatter').map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select></div>
+   <div className="field"><label>Chatter</label><select value={userId} onChange={e=>setUserId(e.target.value)}>{availableChatters.map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select></div>
    <div className="field"><label>Inicio</label><input type="datetime-local" value={start} onChange={e=>setStart(e.target.value)}/></div>
    <div className="field"><label>Fin</label><input type="datetime-local" value={end} onChange={e=>setEnd(e.target.value)}/></div>
    <div className="field" style={{gridColumn:'1/-1'}}><label>Notas del turno</label><input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Instrucciones o modelo prioritario…"/></div>
-   <div style={{gridColumn:'1/-1',display:'flex',justifyContent:'flex-end'}}><button className="btn" disabled={busy==='create'}>{busy==='create'?'Guardando…':'Programar turno'}</button></div>
+   <div style={{gridColumn:'1/-1',display:'flex',justifyContent:'flex-end'}}><button className="btn" disabled={busy==='create'||!availableChatters.length||!userId}>{busy==='create'?'Guardando…':'Programar turno'}</button></div>
   </form></div>}
   <div className="section-head"><div><h2>{manager?'Calendario del equipo':'Mis turnos'}</h2><p className="page-intro">Control de horario, entrada y salida de cada turno.</p></div><button className="btn-ghost" onClick={load} disabled={loading}>{loading?'Actualizando…':'↻ Actualizar'}</button></div>
   <div className="shift-list">{shifts.map(shift=>{const entry=entries.find(e=>e.shift_id===shift.id);const mine=shift.user_id===currentUserId;return <article className="panel shift-card" key={shift.id}><div className="shift-card-main"><div><span className="eyebrow">{model(shift.model_id)}</span><strong>{manager?person(shift.user_id):'Turno asignado'}</strong><small>{new Date(shift.starts_at).toLocaleString()} — {new Date(shift.ends_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small>{shift.notes&&<p>{shift.notes}</p>}</div><div className="shift-status"><span className={'status '+(entry?.clock_out_at?'':'pending')}>{entry?.clock_out_at?'Completado':entry?'En curso':'Programado'}</span>{entry&&<small>{duration(entry.clock_in_at,entry.clock_out_at)}</small>}</div></div>{!manager&&mine&&!entry&&<button className="btn" onClick={()=>clockIn(shift)} disabled={busy===shift.id}>Iniciar turno</button>}{!manager&&mine&&entry&&!entry.clock_out_at&&<button className="btn" onClick={()=>clockOut(entry)} disabled={busy===entry.id}>Finalizar turno</button>}</article>})}{!loading&&shifts.length===0&&<div className="panel empty">No hay turnos programados.</div>}</div>
