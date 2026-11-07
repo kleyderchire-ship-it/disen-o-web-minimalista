@@ -39,16 +39,17 @@ export default function TeamPerformanceWorkspace({models,supabase}:{models:Model
   finally{setLoading(false)}
  }
  useEffect(()=>{load()},[])
+ const endMs=new Date(end).getTime()
  const rows=useMemo(()=>people.map(person=>{
   const ownSales=sales.filter(s=>s.chatter_id===person.id)
   const ownEntries=entries.filter(e=>e.user_id===person.id)
   const revenue=ownSales.reduce((sum,s)=>sum+Number(s.amount||0),0)
-  const hours=ownEntries.reduce((sum,e)=>sum+Math.max(0,(new Date(e.clock_out_at||Date.now()).getTime()-new Date(e.clock_in_at).getTime())/3600000),0)
+  const hours=ownEntries.reduce((sum,e)=>sum+Math.max(0,(Math.min(new Date(e.clock_out_at||Date.now()).getTime(),endMs)-new Date(e.clock_in_at).getTime())/3600000),0)
   return {id:person.id,name:person.full_name,revenue,count:ownSales.length,average:ownSales.length?revenue/ownSales.length:0,hours}
  }).sort((a,b)=>b.revenue-a.revenue),[people,sales,entries])
  const attributed=sales.filter(s=>s.chatter_id).reduce((sum,s)=>sum+Number(s.amount||0),0)
  const unattributed=sales.filter(s=>!s.chatter_id).reduce((sum,s)=>sum+Number(s.amount||0),0)
- const totalHours=entries.reduce((sum,e)=>sum+Math.max(0,(new Date(e.clock_out_at||Date.now()).getTime()-new Date(e.clock_in_at).getTime())/3600000),0)
+ const totalHours=entries.reduce((sum,e)=>sum+Math.max(0,(Math.min(new Date(e.clock_out_at||Date.now()).getTime(),endMs)-new Date(e.clock_in_at).getTime())/3600000),0)
  return <div className="team-performance-workspace">
   <div className="panel performance-filter"><div className="field"><label>Modelo</label><select value={modelFilter} onChange={e=>setModelFilter(e.target.value)}><option value="all">Todas</option>{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></div><div className="field"><label>Desde</label><input type="datetime-local" value={start} onChange={e=>setStart(e.target.value)}/></div><div className="field"><label>Hasta</label><input type="datetime-local" value={end} onChange={e=>setEnd(e.target.value)}/></div><button className="btn" onClick={load} disabled={loading}>{loading?'Consultando…':'Actualizar'}</button></div>
   {error&&<div className="notice inbox-feedback-error">{error}</div>}
