@@ -44,3 +44,6 @@
 
 
 .shift-schedule-form{padding:18px;margin-bottom:18px}.shift-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}.shift-card{padding:15px}.shift-card-main{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.shift-card-main strong,.shift-card-main small{display:block}.shift-card-main strong{font:600 13px Manrope;margin-top:6px}.shift-card-main small{font-size:10px;color:var(--muted);margin-top:4px}.shift-card-main p{font-size:10px;color:#aeb4b5;margin:7px 0 0}.shift-status{display:flex;flex-direction:column;align-items:end;gap:5px}.shift-status small{font-size:9px;color:var(--muted)}
+
+
+.inbox-thread-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
