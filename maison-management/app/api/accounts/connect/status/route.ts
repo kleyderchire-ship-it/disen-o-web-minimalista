@@ -24,6 +24,9 @@ export async function GET(request: Request) {
   const poll = await fansApiRequest('https://api.fansapi.com/api/authenticate/' + encodeURIComponent(attemptId), context.apiKey)
   if (!poll.response.ok) return NextResponse.json({ error: 'No se pudo consultar el estado en Fans API.', provider: poll.payload }, { status: poll.response.status })
   const data: any = poll.payload
+  if (data?.mobile_auth_session_deeplink) {
+    await context.supabase.from('provider_auth_attempts').update({ mobile_auth_session_deeplink: data.mobile_auth_session_deeplink }).eq('id', attempt.id)
+  }
   const state = String(data?.state || 'pending')
   if (state === 'authenticated' && data?.account?.id) {
     const { error: saveError } = await context.supabase.from('platform_accounts').upsert({
