@@ -42,7 +42,7 @@ export default function FanCRMWorkspace({models,supabase}:{models:Model[];supaba
    setSelectedList(current=>current||String(rows.find(x=>x.type==='custom')?.id||''))
   }catch(e){setError(e instanceof Error?e.message:'No se pudieron cargar las etiquetas.')}
  }
- useEffect(()=>{if(modelId){loadTags();setSelectedFanIds([])}},[modelId])
+ useEffect(()=>{if(modelId){setSelectedList('');setSelectedFanIds([]);loadTags()}},[modelId])
  async function createTag(){
   if(!newTag.trim())return
   setTagBusy(true);setError('')
@@ -52,6 +52,7 @@ export default function FanCRMWorkspace({models,supabase}:{models:Model[];supaba
    const payload=await response.json()
    if(!response.ok)throw new Error(payload.error||'No se pudo crear la etiqueta.')
    setNewTag('');setError('')
+   if(payload?.data?.id!==undefined)setSelectedList(String(payload.data.id))
    await loadTags()
   }catch(e){setError(e instanceof Error?e.message:'No se pudo crear la etiqueta.')}
   finally{setTagBusy(false)}
