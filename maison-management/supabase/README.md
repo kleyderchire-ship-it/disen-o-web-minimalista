@@ -15,3 +15,23 @@
 - Publication requests must be made from server routes after checking the signed-in user's role and model assignment. Chatter publishing should require an explicit confirmation and be logged.
 
 The app must not be used with real creator accounts until authentication, server-side authorization, database credentials, and provider credentials have all been configured and tested.
+
+## Automatic OnlyFans fans and subscriptions
+
+The Supabase Edge Function `fans-api-webhook` receives Fans API subscription events and stores them automatically:
+- `subscriptions.new`: creates/updates the fan profile and records a new subscription.
+- `subscriptions.renewed`: updates the active subscription and records the renewal.
+- `subscriptions.expired`: marks the subscription expired and records the lapse.
+
+The receiver verifies the Fans API `Signature` header with HMAC-SHA256 and deduplicates deliveries using `X-OFAPI-Idempotency-Key`. The webhook must be configured with a signing secret.
+
+### Finish the webhook connection
+1. In Supabase Dashboard, open Edge Functions → Secrets and add `FANS_API_WEBHOOK_SECRET` with a long random secret of your choice.
+2. In the Fans API Console → Webhooks, create an OnlyFans webhook with endpoint:
+   `https://nejcpgkpynzpnoujllrx.supabase.co/functions/v1/fans-api-webhook`
+3. Paste the same signing secret into the webhook's Signing Secret field.
+4. Subscribe to `subscriptions.new`, `subscriptions.renewed`, and `subscriptions.expired`.
+5. Connect each creator's OnlyFans account with their own authorization. Map the provider's `acct_...` account ID to the correct model in `public.platform_accounts` and set `connection_status='connected'`. Events are rejected if the account is not mapped to a connected MAISON model.
+6. Send a test event from the Fans API console and verify that a fan appears in MAISON's Fans section.
+
+Do not put the signing secret or Fans API API key in browser code, Git, or chat. Webhooks are event-driven and near real-time, but provider delivery may be delayed or retried; the receiver is idempotent.
