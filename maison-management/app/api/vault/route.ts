@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   params.set('sort', 'desc')
   params.set('limit', '48')
   params.set('offset', String(offset))
-  const result = await fansApiRequest(`https://app.onlyfansapi.com/api/${encodeURIComponent(context.accountId)}/media/vault?${params.toString()}`, context.apiKey)
+  const result = await fansApiRequest(`https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/media/vault?${params.toString()}`, context.apiKey)
   if (!result.response.ok) return NextResponse.json({ error: 'No se pudo cargar la biblioteca de OnlyFans.', provider: result.payload }, { status: result.response.status })
   return NextResponse.json(result.payload)
 }
