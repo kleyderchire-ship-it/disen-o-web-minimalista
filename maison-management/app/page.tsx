@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 
 type Model = { id:string; name:string; handle:string; status:string; revenue:number; chatter:string }
-type Sale = { id:number; model:string; type:string; amount:number; chatter:string; date:string }
-type FanEntry = { id:number; model:string; count:number; source:string; chatter:string; date:string }
-type ContentEntry = { id:number; model:string; kind:string; caption:string; status:string; chatter:string; date:string }
+type Sale = { id:string; model:string; type:string; amount:number; chatter:string; date:string }
+type FanEntry = { id:string; model:string; count:number; source:string; chatter:string; date:string }
+type ContentEntry = { id:string; model:string; kind:string; caption:string; status:string; chatter:string; date:string }
 
 const initialModels:Model[]=[]
 const initialSales:Sale[]=[]
@@ -121,8 +121,8 @@ export default function Home(){
    <div className="sidebar-bottom"><div className="profile"><div className="avatar">MM</div><div><strong>{roleNames[role]}</strong><small>MAISON MANAGEMENT</small></div></div></div>
   </aside>
   <main className="main">
-   <header className="topbar"><div><div className="eyebrow">MAISON MANAGEMENT / {title}</div><h1 className="page-title">{section==='overview'?'Panel de control':title}</h1></div><div className="top-actions"><select aria-label="Simular nivel de acceso" className="role-select" value={role} onChange={e=>{const next=e.target.value as 'admin'|'supervisor'|'chatter';setRole(next);if(!(['overview','models','audience','content','team','sales','finance','library'].includes(section)) || !(next==='admin'?['overview','models','audience','content','team','sales','finance','library']:next==='supervisor'?['overview','models','audience','content','team','sales','library']:['overview','models','audience','content','sales']).includes(section))setSection('overview')}}><option value="admin">Administrador</option><option value="supervisor">Supervisor</option><option value="chatter">Chatter</option></select><span className="date-pill">NOV 2026</span><span className="demo-pill">VISTA PREVIA</span></div></header>
-   <div className="notice"><strong>Entorno de demostración.</strong> Puedes cambiar el selector de rol para previsualizar los menús de Administrador, Supervisor y Chatter. Esto todavía no es una barrera de seguridad: los permisos reales se aplicarán en el servidor y en la base de datos antes de usar información real.</div>
+   <header className="topbar"><div><div className="eyebrow">MAISON MANAGEMENT / {title}</div><h1 className="page-title">{section==='overview'?'Panel de control':title}</h1></div><div className="top-actions"><span className="date-pill">{roleNames[role]}</span><button className="btn-ghost" onClick={signOut}>Cerrar sesión</button><span className="date-pill">CUENTA CONECTADA</span></div></header>
+   <div className="notice"><strong>Sesión segura.</strong> Tus permisos proceden de tu perfil autenticado y la base de datos aplica restricciones por modelo. {dataLoading?"Sincronizando datos…":"Datos guardados en Supabase."}</div>{dataError&&<div className="notice" style={{borderColor:"#a94442"}}>{dataError}</div>}
    {section==='overview'&&<><div className="grid">
     <div className="stat"><div className="stat-top">Ingresos registrados <span className="stat-icon">$</span></div><div className="stat-value">{money(total)}</div><div className="stat-foot">Ventas de muestra en este panel</div></div>
     <div className="stat"><div className="stat-top">Modelos activos <span className="stat-icon">♙</span></div><div className="stat-value">{models.filter(m=>m.status==='Activa').length}</div><div className="stat-foot">Perfiles en gestión</div></div>
