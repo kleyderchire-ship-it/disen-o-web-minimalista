@@ -44,7 +44,7 @@ export default function MassCampaignWorkspace({models,supabase}:{models:Model[];
   const scheduledDate=scheduled?new Date(scheduled):null
   const mediaFiles=mediaIds.split(',').map(x=>x.trim()).filter(Boolean)
   const amount=price?Number(price):0
-  if(!Number.isFinite(amount)||(amount!==0&&(amount<3||amount>200))){setError('El precio debe ser 0 o estar entre 3 y 200 USD.');return}
+  if(!Number.isFinite(amount)||(amount!==0&&(!Number.isInteger(amount)||amount<3||amount>200))){setError('El precio debe ser 0 o estar entre 3 y 200 USD.');return}
   if(amount>0&&!mediaFiles.length){setError('Un PPV masivo necesita contenido multimedia del vault.');return}
   if(scheduledDate&&(!Number.isFinite(scheduledDate.getTime())||scheduledDate.getTime()<=Date.now())){setError('La programación debe ser una fecha futura.');return}
   const action=scheduledDate?'programar':'enviar ahora'
@@ -70,7 +70,7 @@ export default function MassCampaignWorkspace({models,supabase}:{models:Model[];
     <div className="field" style={{gridColumn:'1/-1'}}><label>Audiencia (puedes seleccionar varias listas)</label><div className="campaign-list-box">{loading&&<div className="empty">Cargando listas…</div>}{!loading&&lists.length===0&&<div className="empty">No hay listas disponibles o la cuenta no está conectada.</div>}{lists.map(list=><label className="campaign-list-option" key={String(list.id)}><input type="checkbox" checked={selected.includes(String(list.id))} onChange={e=>setSelected(current=>e.target.checked?[...current,String(list.id)]:current.filter(id=>id!==String(list.id)))}/><span><strong>{list.name}</strong><small>{list.usersCount??0} destinatarios · {list.type||'lista'}</small></span></label>)}</div><div className="muted">{selected.length} listas seleccionadas · {selectedCount} destinatarios aproximados</div></div>
     <div className="field" style={{gridColumn:'1/-1'}}><label>Mensaje</label><textarea rows={5} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Escribe el mensaje que recibirán los fans…"/></div>
     <div className="field"><label>IDs de medios del vault (separados por coma)</label><input value={mediaIds} onChange={e=>setMediaIds(e.target.value)} placeholder="Opcional: 123456789, 987654321"/></div>
-    <div className="field"><label>Precio PPV (USD)</label><input type="number" min="3" max="200" step="0.01" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Gratis"/></div>
+    <div className="field"><label>Precio PPV (USD)</label><input type="number" min="3" max="200" step="1" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Gratis"/></div>
     <div className="field"><label>Texto bloqueado</label><label className="campaign-toggle"><input type="checkbox" checked={lockedText} onChange={e=>setLockedText(e.target.checked)}/> Bloquear texto hasta la compra</label></div>
     <div className="field"><label>Programar para (opcional)</label><input type="datetime-local" value={scheduled} onChange={e=>setScheduled(e.target.value)}/></div>
     <div className="field"><label>Protección de palabras restringidas</label><label className="campaign-toggle"><input type="checkbox" checked={blockBanned} onChange={e=>setBlockBanned(e.target.checked)}/> Revisar palabras de riesgo</label></div>
