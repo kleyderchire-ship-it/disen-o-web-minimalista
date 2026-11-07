@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     model_id: modelId, provider_campaign_id: providerData?.data?.id ? String(providerData.data.id) : null,
     campaign_name: String(body?.campaignName || 'Campaña ' + new Date().toLocaleString()),
     message_text: text, audience: { userLists, userIds, excludedLists, price, mediaFilesCount: mediaFiles.length },
-    scheduled_at: scheduledDate || null, status: scheduledDate || body?.saveForLater ? 'scheduled' : 'sent',
+    scheduled_at: scheduledDate || null, status: body?.saveForLater ? 'draft' : scheduledDate ? 'scheduled' : 'sent',
     created_by: context.user.id, provider_response: providerData,
   })
   return NextResponse.json(response.payload)
