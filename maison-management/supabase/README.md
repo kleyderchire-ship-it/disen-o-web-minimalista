@@ -39,8 +39,11 @@ El receptor valida la firma HMAC-SHA256 del cuerpo original y deduplica mediante
 
 ## Variables pendientes para activar la conexión real
 - Vercel: `FANS_API_KEY` (Production y Preview).
-- Supabase Edge Function Secrets: `FANS_API_WEBHOOK_SECRET`.
+- Supabase Edge Function Secrets: `FANS_API_WEBHOOK_SECRET` y `FANS_API_KEY` (la misma API key del servidor Vercel) para habilitar mensajes automáticos por eventos.
 - Fans API Console: webhook creado, firmado y suscrito a los eventos requeridos.
 - Cada modelo: autorización Auth+ completada y cuenta asociada al modelo correcto.
 
 No se debe considerar una cuenta conectada hasta que Auth+ termine correctamente y MAISON muestre el estado conectado. No se deben publicar posts, historias ni campañas reales hasta completar una prueba autorizada con una cuenta de prueba.
+
+## Automatizaciones de suscripción
+MAISON permite crear reglas inmediatas para `subscriptions.new`, `subscriptions.renewed` y `subscriptions.expired`. El webhook envía el mensaje mediante Fans API y registra cada ejecución con una clave idempotente para evitar duplicados. Estas reglas no implementan todavía secuencias con retraso: se ejecutan al recibir el evento. Para activarlas, `FANS_API_KEY` también debe existir en Supabase → Edge Functions → Secrets. No actives una regla de bienvenida si ya está activo el mensaje nativo de OnlyFans para el mismo evento, para evitar mensajes duplicados.
