@@ -21,7 +21,7 @@ type ContentEntry = { id:string; model:string; kind:string; caption:string; stat
 
 const initialModels:Model[]=[]
 const initialSales:Sale[]=[]
-const navItems=[['overview','◫','Resumen'],['inbox','✉','Mensajes'],['campaigns','◈','Campañas'],['scripts','▤','Guiones'],['shifts','◷','Turnos'],['models,'♙','Modelos'],['audience','♧','Fans'],['content','▣','Publicaciones'],['team','♧','Equipo'],['sales','↗','Ventas'],['finance','＄','Finanzas'],['library','▧','Biblioteca']]
+const navItems=[['overview','◫','Resumen'],['inbox','✉','Mensajes'],['campaigns','◈','Campañas'],['scripts','▤','Guiones'],['shifts','◷','Turnos'],['models','♙','Modelos'],['audience','♧','Fans'],['content','▣','Publicaciones'],['team','♧','Equipo'],['sales','↗','Ventas'],['finance','＄','Finanzas'],['library','▧','Biblioteca']]
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n)
 
 export default function Home(){
