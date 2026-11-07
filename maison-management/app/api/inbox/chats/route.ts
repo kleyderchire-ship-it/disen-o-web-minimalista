@@ -1,0 +1,28 @@
+import { NextResponse } from 'next/server'
+import { fansApiRequest, getFansApiContext } from '@/lib/fans-api'
+
+export const runtime = 'nodejs'
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const modelId = searchParams.get('modelId') || ''
+  if (!/^[0-9a-f-]{36}$/i.test(modelId)) return NextResponse.json({ error: 'Modelo no válido.' }, { status: 400 })
+
+  const context = await getFansApiContext(request, modelId)
+  if ('error' in context) return context.error
+
+  const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 50)))
+  const offset = Math.max(0, Number(searchParams.get('offset') || 0))
+  const order = searchParams.get('order') === 'old' ? 'old' : 'recent'
+  const filter = searchParams.get('filter') || ''
+  const query = searchParams.get('query') || ''
+  const allowedFilters = new Set(['pinned','priority','unread','with_tips','unread_with_tips'])
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset), skip_users: 'none', order })
+  if (allowedFilters.has(filter)) params.set('filter', filter)
+  if (query.trim()) params.set('query', query.trim().slice(0, 120))
+
+  const url = `https://app.onlyfansapi.com/api/${encodeURIComponent(context.accountId)}/chats?${params.toString()}`
+  const result = await fansApiRequest(url, context.apiKey)
+  if (!result.response.ok) return NextResponse.json({ error: 'Fans API no pudo cargar la bandeja.', provider: result.payload }, { status: result.response.status })
+  return NextResponse.json(result.payload)
+}
