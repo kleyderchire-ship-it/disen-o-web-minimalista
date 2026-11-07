@@ -20,6 +20,10 @@ const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency
 
 export default function Home(){
  const [section,setSection]=useState('overview')
+ const [role,setRole]=useState<'admin'|'supervisor'|'chatter'>('admin')
+ const roleNames={admin:'Administrador',supervisor:'Supervisor',chatter:'Chatter'}
+ const allowedSections=role==='admin'?['overview','models','team','sales','finance','library']:role==='supervisor'?['overview','models','team','sales','library']:['overview','models','sales']
+ const visibleNavItems=navItems.filter(([key])=>allowedSections.includes(key))
  const [models,setModels]=useState(initialModels)
  const [sales,setSales]=useState(initialSales)
  const [showModel,setShowModel]=useState(false)
@@ -41,14 +45,13 @@ export default function Home(){
   <aside className="sidebar">
    <div className="brand"><div className="brand-mark">MAISON</div><div className="brand-sub">MANAGEMENT · AGENCY OS</div></div>
    <div className="nav-label">WORKSPACE</div>
-   {navItems.map(([key,icon,label])=><button key={key} className={'nav '+(section===key?'active':'')} onClick={()=>{setSection(key);setSearch('')}}><span className="nav-icon">{icon}</span><span>{label}</span></button>)}
-   <div className="nav-label">SISTEMA</div>
-   <button className="nav" onClick={()=>alert('La configuración de usuarios y permisos se habilitará al conectar la autenticación.')}><span className="nav-icon">⚙</span><span>Configuración</span></button>
-   <div className="sidebar-bottom"><div className="profile"><div className="avatar">MM</div><div><strong>Administrador</strong><small>MAISON MANAGEMENT</small></div></div></div>
+   {visibleNavItems.map(([key,icon,label])=><button key={key} className={'nav '+(section===key?'active':'')} onClick={()=>{setSection(key);setSearch('')}}><span className="nav-icon">{icon}</span><span>{label}</span></button>)}
+   {role==='admin'&&<><div className="nav-label">SISTEMA</div><button className="nav" onClick={()=>alert('La configuración real se habilitará al conectar la autenticación.')}><span className="nav-icon">⚙</span><span>Configuración</span></button></>}
+   <div className="sidebar-bottom"><div className="profile"><div className="avatar">MM</div><div><strong>{roleNames[role]}</strong><small>MAISON MANAGEMENT</small></div></div></div>
   </aside>
   <main className="main">
-   <header className="topbar"><div><div className="eyebrow">MAISON MANAGEMENT / {title}</div><h1 className="page-title">{section==='overview'?'Panel de control':title}</h1></div><div className="top-actions"><span className="date-pill">NOV 2026</span><span className="demo-pill">VISTA PREVIA</span></div></header>
-   <div className="notice"><strong>Entorno de demostración.</strong> Los datos son ejemplos y los cambios solo viven en esta sesión del navegador. Antes de operar con información real conectaremos autenticación, base de datos y almacenamiento privado.</div>
+   <header className="topbar"><div><div className="eyebrow">MAISON MANAGEMENT / {title}</div><h1 className="page-title">{section==='overview'?'Panel de control':title}</h1></div><div className="top-actions"><select aria-label="Simular nivel de acceso" className="role-select" value={role} onChange={e=>{const next=e.target.value as 'admin'|'supervisor'|'chatter';setRole(next);if(!(['overview','models','team','sales','finance','library'].includes(section)) || !(next==='admin'?['overview','models','team','sales','finance','library']:next==='supervisor'?['overview','models','team','sales','library']:['overview','models','sales']).includes(section))setSection('overview')}}><option value="admin">Administrador</option><option value="supervisor">Supervisor</option><option value="chatter">Chatter</option></select><span className="date-pill">NOV 2026</span><span className="demo-pill">VISTA PREVIA</span></div></header>
+   <div className="notice"><strong>Entorno de demostración.</strong> Puedes cambiar el selector de rol para previsualizar los menús de Administrador, Supervisor y Chatter. Esto todavía no es una barrera de seguridad: los permisos reales se aplicarán en el servidor y en la base de datos antes de usar información real.</div>
    {section==='overview'&&<><div className="grid">
     <div className="stat"><div className="stat-top">Ingresos registrados <span className="stat-icon">$</span></div><div className="stat-value">{money(total)}</div><div className="stat-foot">Ventas de muestra en este panel</div></div>
     <div className="stat"><div className="stat-top">Modelos activos <span className="stat-icon">♙</span></div><div className="stat-value">{models.filter(m=>m.status==='Activa').length}</div><div className="stat-foot">Perfiles en gestión</div></div>
