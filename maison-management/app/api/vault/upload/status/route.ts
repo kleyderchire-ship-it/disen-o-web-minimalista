@@ -14,9 +14,10 @@ export async function GET(request:Request){
  let url:URL
  try{url=new URL(pollingUrl,'https://api.fansapi.com')}catch{return NextResponse.json({error:'URL de seguimiento no válida.'},{status:400})}
  const expectedPrefix='/api/'+encodeURIComponent(context.accountId)+'/media/upload/'
- if(url.hostname!=='api.fansapi.com'||url.protocol!=='https:'||!url.pathname.startsWith(expectedPrefix)||!url.pathname.endsWith('/status')){
+ if(!['api.fansapi.com','app.onlyfansapi.com'].includes(url.hostname)||url.protocol!=='https:'||!url.pathname.startsWith(expectedPrefix)||!url.pathname.endsWith('/status')){
   return NextResponse.json({error:'La URL de seguimiento no corresponde a esta cuenta.'},{status:400})
  }
+ url.hostname='api.fansapi.com'
  const result=await fansApiRequest(url.toString(),context.apiKey)
  if(!result.response.ok)return NextResponse.json({error:'No se pudo consultar el estado de la carga.',provider:result.payload},{status:result.response.status})
  return NextResponse.json(result.payload)
