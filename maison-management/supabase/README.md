@@ -22,9 +22,7 @@ La Edge Function desplegada es:
 `https://nejcpgkpynzpnoujllrx.supabase.co/functions/v1/fans-api-webhook`
 
 Procesa:
-- `subscriptions.new`, `subscriptions.renewed`, `subscriptions.expired`: actualiza el directorio y el historial de suscripciones.
-- `messages.received`, `messages.sent`: guarda mensajes y conversaciones para la bandeja y activa Supabase Realtime.
-- `transactions.new`: registra ingresos y eventos de fans sin duplicar la misma transacción.
+- `subscriptions.new`, `subscriptions.renewed`, `subscriptions.expired`: actualiza el directorio y el historial de suscripciones, y ejecuta las reglas automáticas habilitadas.
 - `accounts.disconnected`, `accounts.authentication_failed`, `accounts.session_expired`, `accounts.reconnected`: actualiza el estado y el mapeo de la cuenta.
 
 ### Activar el webhook
