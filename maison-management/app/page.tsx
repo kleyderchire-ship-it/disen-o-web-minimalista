@@ -1,22 +1,15 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 
-type Model = { id:number; name:string; handle:string; status:string; revenue:number; chatter:string }
+type Model = { id:string; name:string; handle:string; status:string; revenue:number; chatter:string }
 type Sale = { id:number; model:string; type:string; amount:number; chatter:string; date:string }
 type FanEntry = { id:number; model:string; count:number; source:string; chatter:string; date:string }
 type ContentEntry = { id:number; model:string; kind:string; caption:string; status:string; chatter:string; date:string }
 
-const initialModels:Model[]=[
- {id:1,name:'Modelo de ejemplo 01',handle:'@modelo01',status:'Activa',revenue:4280,chatter:'Equipo A'},
- {id:2,name:'Modelo de ejemplo 02',handle:'@modelo02',status:'Activa',revenue:3150,chatter:'Equipo B'},
- {id:3,name:'Modelo de ejemplo 03',handle:'@modelo03',status:'En incorporación',revenue:0,chatter:'Sin asignar'},
-]
-const initialSales:Sale[]=[
- {id:1,model:'Modelo de ejemplo 01',type:'Propina',amount:120,chatter:'Chatter A',date:'Hoy'},
- {id:2,model:'Modelo de ejemplo 02',type:'Mensaje PPV',amount:85,chatter:'Chatter B',date:'Hoy'},
- {id:3,model:'Modelo de ejemplo 01',type:'Contenido',amount:65,chatter:'Chatter A',date:'Ayer'},
-]
+const initialModels:Model[]=[]
+const initialSales:Sale[]=[]
 const navItems=[['overview','◫','Resumen'],['models','♙','Modelos'],['audience','♧','Fans'],['content','▣','Publicaciones'],['team','♧','Equipo'],['sales','↗','Ventas'],['finance','＄','Finanzas'],['library','▧','Biblioteca']]
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n)
 
