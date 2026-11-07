@@ -15,6 +15,8 @@ type Chat = {
 }
 type VaultAsset = { id: number | string; type: string; files?: { thumb?: { url?: string } | null; preview?: { url?: string } | null; full?: { url?: string } }; isReady?: boolean; hasError?: boolean }
 type MessageMedia = { id?: number | string; type?: string; files?: { thumb?: { url?: string } | null; preview?: { url?: string } | null; full?: { url?: string } } }
+type Script = {id:string;title:string;body:string;category:string}
+type Note = {id:string;note:string;author_id:string;created_at:string}
 type Message = {
   id?: string | number
   text?: string
@@ -51,11 +53,22 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
   const [selectedMedia, setSelectedMedia] = useState<string[]>([])
   const [loadingVault, setLoadingVault] = useState(false)
   const [vaultError, setVaultError] = useState('')
+  const [conversationId, setConversationId] = useState('')
+  const [notes, setNotes] = useState<Note[]>([])
+  const [noteDraft, setNoteDraft] = useState('')
+  const [scripts, setScripts] = useState<Script[]>([])
 
   useEffect(() => {
     if (!modelId && models.length) setModelId(models[0].id)
     if (modelId && !models.some(model => model.id === modelId)) setModelId(models[0]?.id || '')
   }, [models, modelId])
+
+  useEffect(() => {
+    if (!modelId) return
+    supabase.from('message_scripts').select('id,title,body,category').eq('model_id',modelId).order('category').then(({data}) => {
+      setScripts((data || []) as Script[])
+    })
+  }, [modelId])
 
   async function accessToken() {
     const { data } = await supabase.auth.getSession()
@@ -95,6 +108,25 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
     setLoadingMessages(true)
     setError('')
     try {
+      const { data: userData } = await supabase.auth.getUser()
+      const fan = chat.fan || {}
+      const { data: conversation } = await supabase.from('inbox_conversations').upsert({
+        model_id: modelId,
+        provider_chat_id: chatId,
+        fan_username: fan.username || null,
+        fan_display_name: fan.displayName || fan.name || null,
+        fan_avatar_url: fan.avatarThumbs?.c144 || fan.avatar || null,
+        last_message_preview: plain(chat.lastMessage?.text || ''),
+        last_message_at: chat.lastMessage?.createdAt || null,
+      }, { onConflict: 'model_id,provider_chat_id' }).select('id').single()
+      if (conversation?.id) {
+        setConversationId(conversation.id)
+        const { data: noteRows } = await supabase.from('inbox_conversation_notes').select('id,note,author_id,created_at').eq('conversation_id',conversation.id).order('created_at',{ascending:false})
+        setNotes((noteRows || []) as Note[])
+      } else {
+        setConversationId('')
+        setNotes([])
+      }
       const token = await accessToken()
       const params = new URLSearchParams({ modelId, chatId, limit: '50' })
       const response = await fetch('/api/inbox/messages?' + params.toString(), { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' })
@@ -173,6 +205,20 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
     }
   }
 
+  async function saveNote(event: React.FormEvent) {
+    event.preventDefault()
+    if (!conversationId || !modelId || !noteDraft.trim()) return
+    const { data } = await supabase.auth.getUser()
+    if (!data.user) return
+    const { error } = await supabase.from('inbox_conversation_notes').insert({
+      conversation_id: conversationId, model_id: modelId, author_id: data.user.id, note: noteDraft.trim(),
+    })
+    if (error) { setError(error.message); return }
+    const { data: rows } = await supabase.from('inbox_conversation_notes').select('id,note,author_id,created_at').eq('conversation_id',conversationId).order('created_at',{ascending:false})
+    setNotes((rows || []) as Note[])
+    setNoteDraft('')
+  }
+
   async function openVault() {
     setShowVault(true)
     if (vaultItems.length || !modelId) return
@@ -223,16 +269,19 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
         {!selectedChat && <div className="empty inbox-thread-empty"><div style={{fontSize:32,marginBottom:12}}>✉</div><strong>Tu centro de mensajes</strong><p>Selecciona una conversación para ver el historial y responder desde MAISON.</p></div>}
         {selectedChat && <>
           <header className="inbox-thread-head"><div><strong>{selectedChat.fan?.displayName || selectedChat.fan?.name || selectedChat.fan?.username || 'Conversación'}</strong><small>@{selectedChat.fan?.username || selectedChat.fan?.id}</small></div><span className="date-pill">{selectedChat.unreadMessagesCount ? selectedChat.unreadMessagesCount + ' sin leer' : 'Conversación'}</span></header>
+          {notes.length>0&&<div className="inbox-notes"><strong>Notas internas del equipo</strong>{notes.slice(0,3).map(note=><p key={note.id}>{note.note}<small>{time(note.created_at)}</small></p>)}</div>}
           <div className="inbox-messages">
             {loadingMessages && <div className="empty">Cargando mensajes…</div>}
             {!loadingMessages && messages.map((message, index) => <div key={String(message.id || index)} className={'inbox-message-row ' + (message.isSentByMe ? 'outgoing' : 'incoming')}><div className="inbox-message"><p>{plain(message.text || (message.media?.length ? 'Contenido multimedia' : 'Mensaje'))}</p>{message.media?.length ? <div className="inbox-message-media">{message.media.map((asset,i)=>{const src=asset.files?.preview?.url||asset.files?.thumb?.url||asset.files?.full?.url;return src?<img key={String(asset.id||i)} src={src} alt={asset.type||'Archivo multimedia'}/>:<span key={String(asset.id||i)}>{asset.type||'Multimedia'}</span>})}</div>:null}{message.price ? <strong className="inbox-ppv">PPV · {message.price} USD</strong> : null}<small>{time(message.createdAt)}{message.isSentByMe ? (message.seenByFan ? ' · Visto' : ' · Enviado') : ''}</small></div></div>)}
             {!loadingMessages && messages.length === 0 && <div className="empty">Esta conversación no contiene mensajes visibles.</div>}
           </div>
           <form className="inbox-composer" onSubmit={sendMessage}>
+            {scripts.length>0&&<div className="inbox-script-row"><label>Guiones</label><select defaultValue="" onChange={e=>{const script=scripts.find(item=>item.id===e.target.value);if(script)setDraft(current=>current?current+'\\n'+script.body:script.body);e.target.value=''}}><option value="">Insertar respuesta guardada…</option>{scripts.map(script=><option key={script.id} value={script.id}>{script.category} · {script.title}</option>)}</select></div>}
             <textarea value={draft} onChange={e => setDraft(e.target.value)} placeholder="Escribe una respuesta…" rows={3}/>
             {selectedMedia.length>0&&<div className="inbox-selected-media">{selectedMedia.map(id=><button type="button" key={id} className="inbox-media-chip" onClick={()=>setSelectedMedia(v=>v.filter(x=>x!==id))}>Archivo #{id} ×</button>)}</div>}
             <div className="inbox-compose-bottom"><button type="button" className="btn-ghost" onClick={openVault}>＋ Añadir del vault</button><label className="inbox-ppv-field">Precio PPV (USD)<input type="number" min="3" max="200" step="0.01" value={ppvPrice} onChange={e => setPpvPrice(e.target.value)} placeholder="Gratis"/></label><label className="inbox-check"><input type="checkbox" checked={lockedText} onChange={e => setLockedText(e.target.checked)}/> Bloquear texto</label><button className="btn" disabled={sending || (!draft.trim() && selectedMedia.length===0)}>{sending ? 'Enviando…' : 'Enviar mensaje'}</button></div>
           </form>
+          <form className="inbox-note-form" onSubmit={saveNote}><input value={noteDraft} onChange={e=>setNoteDraft(e.target.value)} placeholder="Añadir nota interna para el equipo…"/><button className="btn-ghost" disabled={!noteDraft.trim()||!conversationId}>Guardar nota</button></form>
         </>}
       </div>
     </div>
