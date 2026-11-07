@@ -25,5 +25,11 @@ export async function GET(request: Request) {
   const url = `https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/chats?${params.toString()}`
   const result = await fansApiRequest(url, context.apiKey)
   if (!result.response.ok) return NextResponse.json({ error: 'Fans API no pudo cargar la bandeja.', provider: result.payload }, { status: result.response.status })
-  return NextResponse.json(result.payload)
+  const payload: any = result.payload
+  if (context.role === 'chatter' && Array.isArray(payload?.data)) {
+    const { data: localRows } = await context.supabase.from('inbox_conversations').select('provider_chat_id,assigned_to').eq('model_id', modelId)
+    const blocked = new Set((localRows || []).filter((row: any) => row.assigned_to && row.assigned_to !== context.user.id).map((row: any) => String(row.provider_chat_id)))
+    payload.data = payload.data.filter((chat: any) => !blocked.has(String(chat?.fan?.id || '')))
+  }
+  return NextResponse.json(payload)
 }
