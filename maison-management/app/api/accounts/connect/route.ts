@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const { data: model, error: modelError } = await context.supabase.from('models').select('id,display_name').eq('id', modelId).single()
   if (modelError || !model) return NextResponse.json({ error: 'No se encontró el modelo o no tienes acceso.' }, { status: 404 })
 
-  const start = await fansApiRequest('https://app.onlyfansapi.com/api/authenticate', context.apiKey, {
+  const start = await fansApiRequest('https://api.fansapi.com/api/authenticate', context.apiKey, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ auth_type: 'mobile_app', name: 'MAISON MANAGEMENT · ' + model.display_name, proxyCountry: 'us' }),
