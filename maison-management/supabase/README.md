@@ -1,47 +1,57 @@
 # MAISON MANAGEMENT — configuración de backend
 
 ## Supabase y autenticación
-- El proyecto Supabase de MAISON ya tiene aplicadas las migraciones de esquema, permisos, bandeja, fans, ventas, turnos y auditoría.
+- El proyecto Supabase de MAISON tiene aplicadas las migraciones de esquema, RLS, bandeja, CRM de fans, ventas, turnos, tareas de contenido, automatizaciones y auditoría.
 - La aplicación usa `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` en Vercel.
-- El primer usuario registrado reclama el rol de administrador mediante la RPC protegida `bootstrap_first_admin()`. Después, los nuevos miembros se invitan desde Equipo; no se debe promover usuarios manualmente con SQL.
-- No añadas `SUPABASE_SERVICE_ROLE_KEY` a variables públicas ni al frontend. La Edge Function usa el secreto interno `SUPABASE_SERVICE_ROLE_KEY` que Supabase proporciona en su entorno.
-- RLS separa acceso por rol y modelo asignado. Las conversaciones también se aíslan por chatter asignado.
+- El primer usuario registrado reclama el rol de administrador mediante la RPC protegida `bootstrap_first_admin()`. Los demás miembros se invitan desde Equipo.
+- No añadas `SUPABASE_SERVICE_ROLE_KEY` al frontend ni a variables públicas. Las Edge Functions usan el secreto interno que Supabase proporciona en su entorno.
+- RLS separa el acceso por rol, modelo asignado y chatter asignado a cada conversación. La base impide eliminar o degradar al último administrador activo.
 
 ## Fans API / OnlyFans
 - Fans API es un proveedor externo e independiente, no oficial ni afiliado a OnlyFans.
-- Crea una API key en el panel oficial actual: `https://app.onlyfansapi.com/api-keys`.
-- Añade la variable cifrada `FANS_API_KEY` en Vercel para Production y Preview. Nunca la pongas en el navegador, Git o en el chat.
-- Las rutas del servidor normalizan las llamadas al origen oficial `https://app.onlyfansapi.com/api/`.
-- La conexión de cada creadora se hace mediante Fans API Auth+ en su propio iPhone. No solicites contraseñas, cookies, encabezados de sesión ni códigos 2FA por MAISON.
-- Al completar la autorización, MAISON guarda el ID de cuenta del proveedor y el identificador estable de la creadora de OnlyFans para poder mapear reconexiones futuras.
+- Crea una API key en `https://app.onlyfansapi.com/api-keys`.
+- Añade `FANS_API_KEY` como variable cifrada en Vercel para Production y Preview. Añade la misma variable en Supabase → Edge Functions → Secrets para que el worker pueda enviar mensajes automáticos.
+- Las rutas del servidor usan el origen actual `https://app.onlyfansapi.com/api/`.
+- La conexión de cada creadora se realiza mediante Fans API Auth+ en su propio iPhone. No solicites contraseñas, cookies, encabezados de sesión ni códigos 2FA por MAISON.
+- MAISON guarda el ID de cuenta del proveedor y el identificador estable de la creadora para mapear reconexiones futuras.
 
-## Webhooks automáticos
-
-La Edge Function desplegada es:
+## Webhook de OnlyFans
+Edge Function:
 
 `https://nejcpgkpynzpnoujllrx.supabase.co/functions/v1/fans-api-webhook`
 
-Procesa:
-- `subscriptions.new`, `subscriptions.renewed`, `subscriptions.expired`: actualiza el directorio y el historial de suscripciones, y ejecuta las reglas automáticas habilitadas.
-- `accounts.disconnected`, `accounts.authentication_failed`, `accounts.session_expired`, `accounts.reconnected`: actualiza el estado y el mapeo de la cuenta.
+Eventos procesados:
+- `subscriptions.new`, `subscriptions.renewed`, `subscriptions.expired`: actualiza fans e historial y encola las reglas automáticas activas.
+- `messages.received`, `messages.sent`: sincroniza conversaciones y mensajes en la bandeja.
+- `transactions.new`: registra transacciones e ingresos sin duplicar el evento.
+- `accounts.disconnected`, `accounts.authentication_failed`, `accounts.session_expired`, `accounts.reconnected`: mantiene actualizado el estado y el mapeo de cuentas.
 
-### Activar el webhook
+### Activación
 1. En Supabase Dashboard → Edge Functions → Secrets, crea `FANS_API_WEBHOOK_SECRET` con un secreto aleatorio largo.
-2. En `https://app.onlyfansapi.com` → Webhooks, crea un webhook para OnlyFans con la URL de arriba.
-3. Usa exactamente el mismo valor de `FANS_API_WEBHOOK_SECRET` como Signing Secret.
-4. Suscribe los eventos enumerados en la sección anterior.
-5. En MAISON → Modelos, un administrador inicia la conexión Auth+. La creadora abre el enlace en su propio iPhone y completa la autorización.
-6. Envía eventos de prueba desde el panel de Fans API y verifica Fans, historial de suscripciones y estado de conexión.
+2. En `https://app.onlyfansapi.com` → Webhooks, registra la URL de arriba.
+3. Usa el mismo valor de `FANS_API_WEBHOOK_SECRET` como Signing Secret.
+4. Suscribe todos los eventos enumerados.
+5. En MAISON → Modelos, el administrador inicia Auth+. La creadora completa la autorización desde su propio iPhone.
+6. Envía eventos de prueba y verifica Mensajes, Fans, Ventas y estado de cuenta.
 
-El receptor valida la firma HMAC-SHA256 del cuerpo original y deduplica mediante `X-OFAPI-Idempotency-Key`. Los webhooks pueden reintentarse y no siempre llegan en orden. La bandeja de mensajes consulta directamente la API de Fans API; el receptor de webhook descrito aquí no sincroniza el historial de mensajes ni las transacciones.
+El receptor valida HMAC-SHA256 sobre el cuerpo original y deduplica con `X-OFAPI-Idempotency-Key`. Las entregas repetidas no duplican mensajes, suscripciones ni ventas.
+
+## Automatizaciones programadas
+Worker Edge Function:
+
+`https://nejcpgkpynzpnoujllrx.supabase.co/functions/v1/automation-worker`
+
+- Supabase Cron está configurado para ejecutar el worker cada minuto mediante `pg_cron` y `pg_net`.
+- El secreto interno de cron se guarda en Supabase Vault y no se expone al navegador.
+- Las reglas admiten eventos de suscripción y retrasos de 0 a 10.080 minutos (7 días).
+- El worker reclama trabajos de forma atómica, envía con una clave idempotente y reintenta errores temporales hasta cinco veces.
+- Para enviar, el worker requiere `FANS_API_KEY` en Supabase → Edge Functions → Secrets.
+- No actives una regla de bienvenida si el mensaje de bienvenida nativo de OnlyFans ya está activo para el mismo evento, para evitar duplicados.
 
 ## Variables pendientes para activar la conexión real
-- Vercel: `FANS_API_KEY` (Production y Preview).
-- Supabase Edge Function Secrets: `FANS_API_WEBHOOK_SECRET` y `FANS_API_KEY` (la misma API key del servidor Vercel) para habilitar mensajes automáticos por eventos.
-- Fans API Console: webhook creado, firmado y suscrito a los eventos requeridos.
-- Cada modelo: autorización Auth+ completada y cuenta asociada al modelo correcto.
+- Vercel: `FANS_API_KEY` en Production y Preview.
+- Supabase Edge Function Secrets: `FANS_API_WEBHOOK_SECRET` y `FANS_API_KEY`.
+- Fans API Console: webhook creado, firmado y suscrito a los eventos.
+- Cada modelo: autorización Auth+ completada y cuenta correctamente asociada.
 
-No se debe considerar una cuenta conectada hasta que Auth+ termine correctamente y MAISON muestre el estado conectado. No se deben publicar posts, historias ni campañas reales hasta completar una prueba autorizada con una cuenta de prueba.
-
-## Automatizaciones de suscripción
-MAISON permite crear reglas inmediatas para `subscriptions.new`, `subscriptions.renewed` y `subscriptions.expired`. El webhook envía el mensaje mediante Fans API y registra cada ejecución con una clave idempotente para evitar duplicados. Estas reglas no implementan todavía secuencias con retraso: se ejecutan al recibir el evento. Para activarlas, `FANS_API_KEY` también debe existir en Supabase → Edge Functions → Secrets. No actives una regla de bienvenida si ya está activo el mensaje nativo de OnlyFans para el mismo evento, para evitar mensajes duplicados.
+Una cuenta solo debe considerarse conectada cuando Auth+ termina correctamente y MAISON muestra el estado conectado. Antes de publicar historias, posts o campañas reales, realiza una prueba autorizada con una cuenta de prueba.
