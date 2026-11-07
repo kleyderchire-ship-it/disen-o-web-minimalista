@@ -12,8 +12,10 @@ export async function GET(request: Request) {
   if ('error' in context) return context.error;
   if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
 
-  const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 50)))
-  const offset = Math.max(0, Number(searchParams.get('offset') || 0))
+  const rawLimit = Number(searchParams.get('limit') || 50)
+  const rawOffset = Number(searchParams.get('offset') || 0)
+  const limit = Number.isFinite(rawLimit) ? Math.min(100, Math.max(1, Math.trunc(rawLimit))) : 50
+  const offset = Number.isFinite(rawOffset) ? Math.min(100000, Math.max(0, Math.trunc(rawOffset))) : 0
   const order = searchParams.get('order') === 'old' ? 'old' : 'recent'
   const filter = searchParams.get('filter') || ''
   const query = searchParams.get('query') || ''
