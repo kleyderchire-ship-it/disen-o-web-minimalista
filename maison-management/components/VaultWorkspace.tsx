@@ -96,6 +96,6 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
     </article>
    })}
   </div>
-  <p className="muted">Vista de consulta del contenido guardado en OnlyFans. La carga y el envío de archivos desde MAISON se habilitarán con el flujo de medios autorizado.</p>
+  <p className="muted">Biblioteca sincronizada con OnlyFans. Puedes subir archivos aquí y seleccionarlos desde el vault para usarlos en mensajes y publicaciones.</p>
  </div>
 }
