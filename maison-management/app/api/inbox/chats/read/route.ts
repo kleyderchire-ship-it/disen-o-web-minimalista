@@ -13,6 +13,10 @@ export async function POST(request: Request) {
   const context = await getFansApiContext(request, modelId)
   if ('error' in context) return context.error
   if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
+  if (context.role === 'chatter') {
+    const { data: assignment } = await context.supabase.from('inbox_conversations').select('assigned_to').eq('model_id',modelId).eq('provider_chat_id',chatId).maybeSingle()
+    if (!assignment || assignment.assigned_to !== context.user.id) return NextResponse.json({ error: 'Esta conversación no está asignada a tu usuario.' }, { status: 403 })
+  }
   const suffix = action === 'read' ? 'mark-as-read' : 'mark-as-unread'
   const result = await fansApiRequest(`https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/chats/${encodeURIComponent(chatId)}/${suffix}`, context.apiKey, { method: 'POST' })
   if (!result.response.ok) return NextResponse.json({ error: 'No se pudo actualizar el estado de lectura.', provider: result.payload }, { status: result.response.status })
