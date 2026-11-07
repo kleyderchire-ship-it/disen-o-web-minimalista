@@ -9,7 +9,8 @@ export async function GET(request: Request) {
   if (!/^[0-9a-f-]{36}$/i.test(modelId)) return NextResponse.json({ error: 'Modelo no válido.' }, { status: 400 })
 
   const context = await getFansApiContext(request, modelId)
-  if ('error' in context) return context.error
+  if ('error' in context) return context.error;
+  if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
 
   const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 50)))
   const offset = Math.max(0, Number(searchParams.get('offset') || 0))
