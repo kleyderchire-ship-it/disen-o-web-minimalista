@@ -1,5 +1,8 @@
 name: MAISON Management build
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main]
@@ -28,6 +31,15 @@ jobs:
         with:
           version: 12.3.4
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - name: Build MAISON Management
         run: pnpm --dir maison-management build
+      - name: Commit updated workspace lockfile
+        run: |
+          if ! git diff --quiet -- pnpm-lock.yaml; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add pnpm-lock.yaml
+            git commit -m 'Update pnpm workspace lockfile'
+            git push
+          fi
