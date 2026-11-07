@@ -16,6 +16,7 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
  const [uploadFile,setUploadFile]=useState<File|null>(null)
  const [uploadUrl,setUploadUrl]=useState('')
  const [uploading,setUploading]=useState(false)
+ const [asyncUpload,setAsyncUpload]=useState(false)
  const [uploadNotice,setUploadNotice]=useState('')
  useEffect(()=>{if(!modelId&&models.length)setModelId(models[0].id)},[models,modelId])
  async function upload(){
@@ -29,11 +30,30 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
    form.append('modelId',modelId)
    if(uploadFile)form.append('file',uploadFile)
    else form.append('file_url',uploadUrl.trim())
-   const response=await fetch('/api/vault/upload',{method:'POST',headers:{Authorization:'Bearer '+(data.session?.access_token||'')},body:form})
+   if(asyncUpload)form.append('async','true')
+   const headers={Authorization:'Bearer '+(data.session?.access_token||'')}
+   const response=await fetch('/api/vault/upload',{method:'POST',headers,body:form})
    const payload=await response.json()
    if(!response.ok)throw new Error(payload.error||'No se pudo subir el archivo.')
-   setUploadNotice('Contenido subido al vault de OnlyFans.')
-   setUploadFile(null);setUploadUrl('')
+   if(response.status===202){
+    const pollingUrl=payload?.data?.polling_url
+    if(!pollingUrl)throw new Error('La carga se inició, pero Fans API no devolvió la URL de seguimiento.')
+    setUploadNotice('Archivo en procesamiento. Esperando a que OnlyFans lo prepare…')
+    let completed=false
+    for(let attempt=0;attempt<90;attempt++){
+     await new Promise(resolve=>setTimeout(resolve,2000))
+     const params=new URLSearchParams({modelId,pollingUrl})
+     const statusResponse=await fetch('/api/vault/upload/status?'+params.toString(),{headers,cache:'no-store'})
+     const statusPayload=await statusResponse.json()
+     if(!statusResponse.ok)throw new Error(statusPayload.error||'No se pudo consultar la carga.')
+     const status=statusPayload?.status||statusPayload?.data?.status
+     if(status==='completed'){completed=true;break}
+     if(status==='failed')throw new Error(statusPayload?.error||'Fans API no pudo procesar el archivo.')
+    }
+    if(!completed){setUploadNotice('La carga sigue procesándose en segundo plano. Actualiza la biblioteca en unos minutos.');return}
+   }
+   setUploadNotice('Contenido listo en el vault de OnlyFans.')
+   setUploadFile(null);setUploadUrl('');setAsyncUpload(false)
    await load()
   }catch(e){setError(e instanceof Error?e.message:'Error subiendo contenido.')}
   finally{setUploading(false)}
@@ -56,7 +76,7 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
  }
  useEffect(()=>{if(modelId)load()},[modelId,type])
  return <div className="vault-workspace">
-  <div className="panel vault-upload-panel"><div className="section-head"><div><h2>Subir contenido al vault</h2><p className="page-intro">Añade fotos, videos o audio a la biblioteca de la cuenta.</p></div></div><div className="vault-upload-controls"><div className="field"><label>Archivo (máximo 4 MB)</label><input type="file" accept="image/*,video/*,audio/*" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></div><div className="vault-or">o</div><div className="field"><label>URL pública HTTPS (para archivos grandes)</label><input value={uploadUrl} onChange={e=>setUploadUrl(e.target.value)} placeholder="https://…"/></div><button className="btn" onClick={upload} disabled={uploading||(!uploadFile&&!uploadUrl.trim())}>{uploading?'Subiendo…':'Subir al vault'}</button></div>{uploadNotice&&<div className="notice inbox-feedback-ok">{uploadNotice}</div>}</div>
+  <div className="panel vault-upload-panel"><div className="section-head"><div><h2>Subir contenido al vault</h2><p className="page-intro">Añade fotos, videos o audio a la biblioteca de la cuenta.</p></div></div><div className="vault-upload-controls"><div className="field"><label>Archivo (máximo 4 MB)</label><input type="file" accept="image/*,video/*,audio/*" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></div><div className="vault-or">o</div><div className="field"><label>URL pública HTTPS (para archivos grandes)</label><input value={uploadUrl} onChange={e=>setUploadUrl(e.target.value)} placeholder="https://…"/></div><label className="campaign-toggle vault-async-toggle"><input type="checkbox" checked={asyncUpload} onChange={e=>setAsyncUpload(e.target.checked)}/> Procesar en segundo plano (recomendado para videos grandes)</label><button className="btn" onClick={upload} disabled={uploading||(!uploadFile&&!uploadUrl.trim())}>{uploading?'Subiendo…':'Subir al vault'}</button></div>{uploadNotice&&<div className="notice inbox-feedback-ok">{uploadNotice}</div>}</div>
   <div className="vault-toolbar">
    <div className="field"><label>Modelo</label><select value={modelId} onChange={e=>setModelId(e.target.value)}>{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
    <div className="field"><label>Tipo de archivo</label><select value={type} onChange={e=>setType(e.target.value)}><option value="">Todos</option><option value="photo">Fotos</option><option value="video">Videos</option><option value="gif">GIF</option><option value="audio">Audio</option></select></div>
