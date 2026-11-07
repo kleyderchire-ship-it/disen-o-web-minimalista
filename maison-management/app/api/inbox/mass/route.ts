@@ -18,7 +18,8 @@ export async function POST(request: Request) {
   if (!Number.isFinite(price) || (price !== 0 && (!Number.isInteger(price) || price < 3 || price > 200))) return NextResponse.json({ error: 'El precio debe ser 0 o estar entre 3 y 200 USD.' }, { status: 400 })
   const mediaFiles = Array.isArray(body?.mediaFiles) ? body.mediaFiles.filter((x: unknown) => typeof x === 'string') : []
   if (price > 0 && mediaFiles.length === 0) return NextResponse.json({ error: 'Para enviar un PPV masivo debes adjuntar contenido multimedia.' }, { status: 400 })
-  if (scheduledDate && Number.isNaN(Date.parse(scheduledDate))) return NextResponse.json({ error: 'Fecha de programación no válida.' }, { status: 400 })
+  if (scheduledDate && (!Number.isFinite(Date.parse(scheduledDate)) || Date.parse(scheduledDate) <= Date.now())) return NextResponse.json({ error: 'La fecha de programación debe ser válida y futura.' }, { status: 400 })
+  if (scheduledDate && body?.saveForLater === true) return NextResponse.json({ error: 'Elige programar la campaña o guardarla para después, no ambas acciones.' }, { status: 400 })
 
   const context = await getFansApiContext(request, modelId)
   if ('error' in context) return context.error;
