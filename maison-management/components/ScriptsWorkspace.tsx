@@ -29,10 +29,10 @@ export default function ScriptsWorkspace({models,supabase,role}:{models:Model[];
   if(!modelId||!title.trim()||!body.trim())return
   setError('');setNotice('')
   const {data:user}=await supabase.auth.getUser()
-  const values={model_id:modelId,title:title.trim(),body:body.trim(),category,created_by:user.user?.id||null,updated_at:new Date().toISOString()}
+  const values={model_id:modelId,title:title.trim(),body:body.trim(),category,updated_at:new Date().toISOString()}
   const result=editing
    ? await supabase.from('message_scripts').update(values).eq('id',editing)
-   : await supabase.from('message_scripts').insert(values)
+   : await supabase.from('message_scripts').insert({...values,created_by:user.user?.id||null})
   if(result.error){setError(result.error.message);return}
   setNotice(editing?'Guion actualizado.':'Guion guardado.')
   setTitle('');setBody('');setCategory('general');setEditing('')
