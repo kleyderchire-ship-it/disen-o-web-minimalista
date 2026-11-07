@@ -118,6 +118,20 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelId, filter])
 
+  useEffect(() => {
+    if (!modelId) return
+    const channel = supabase.channel('maison-inbox-' + modelId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_conversations', filter: 'model_id=eq.' + modelId }, () => {
+        void loadChats()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_messages', filter: 'model_id=eq.' + modelId }, () => {
+        void loadChats()
+        if (selectedChat) void loadMessages(selectedChat)
+      })
+      .subscribe()
+    return () => { void supabase.removeChannel(channel) }
+  }, [modelId, selectedChat?.fan?.id])
+
   const visibleChats = useMemo(() => chats.filter(chat => {
     const fan = chat.fan || {}
     const label = [fan.username, fan.name, fan.displayName].filter(Boolean).join(' ').toLowerCase()
