@@ -31,6 +31,9 @@ export async function GET(request: Request) {
   if (state === 'authenticated' && data?.account?.id) {
     const { error: saveError } = await context.supabase.from('platform_accounts').upsert({
       model_id: modelId, provider: 'onlyfans', provider_account_id: data.account.id,
+      provider_creator_id: data.account.onlyfans_data?.id ? String(data.account.onlyfans_data.id) : null,
+      provider_username: data.account.onlyfans_data?.username || null,
+      provider_display_name: data.account.onlyfans_data?.name || null,
       connection_status: 'connected', creator_authorized_at: new Date().toISOString(),
       connected_at: new Date().toISOString(), last_checked_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
