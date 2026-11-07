@@ -3,7 +3,9 @@
 import { useMemo, useState } from 'react'
 
 type Model = { id:number; name:string; handle:string; status:string; revenue:number; chatter:string }
-type Sale = { id:number; model:string; type:string; amount:number; chatter:string; date:string }\ntype FanEntry = { id:number; model:string; count:number; source:string; chatter:string; date:string }\ntype ContentEntry = { id:number; model:string; kind:string; caption:string; status:string; chatter:string; date:string }
+type Sale = { id:number; model:string; type:string; amount:number; chatter:string; date:string }
+type FanEntry = { id:number; model:string; count:number; source:string; chatter:string; date:string }
+type ContentEntry = { id:number; model:string; kind:string; caption:string; status:string; chatter:string; date:string }
 
 const initialModels:Model[]=[
  {id:1,name:'Modelo de ejemplo 01',handle:'@modelo01',status:'Activa',revenue:4280,chatter:'Equipo A'},
@@ -25,7 +27,9 @@ export default function Home(){
  const allowedSections=role==='admin'?['overview','models','audience','content','team','sales','finance','library']:role==='supervisor'?['overview','models','audience','content','team','sales','library']:['overview','models','audience','content','sales']
  const visibleNavItems=navItems.filter(([key])=>allowedSections.includes(key))
  const [models,setModels]=useState(initialModels)
- const [sales,setSales]=useState(initialSales)\n const [fanEntries,setFanEntries]=useState<FanEntry[]>([])\n const [contentEntries,setContentEntries]=useState<ContentEntry[]>([])
+ const [sales,setSales]=useState(initialSales)
+ const [fanEntries,setFanEntries]=useState<FanEntry[]>([])
+ const [contentEntries,setContentEntries]=useState<ContentEntry[]>([])
  const [showModel,setShowModel]=useState(false)
  const [showSale,setShowSale]=useState(false)
  const [search,setSearch]=useState('')
@@ -35,12 +39,23 @@ export default function Home(){
  const [saleModel,setSaleModel]=useState(initialModels[0].name)
  const [saleType,setSaleType]=useState('Propina')
  const [saleAmount,setSaleAmount]=useState('')
- const [saleChatter,setSaleChatter]=useState('')\n const [fanModel,setFanModel]=useState(initialModels[0].name)\n const [fanCount,setFanCount]=useState('')\n const [fanSource,setFanSource]=useState('Nuevo suscriptor')\n const [fanChatter,setFanChatter]=useState('')\n const [postModel,setPostModel]=useState(initialModels[0].name)\n const [postKind,setPostKind]=useState('Historia')\n const [postCaption,setPostCaption]=useState('')\n const [postStatus,setPostStatus]=useState('Publicado')\n const [postChatter,setPostChatter]=useState('')
+ const [saleChatter,setSaleChatter]=useState('')
+ const [fanModel,setFanModel]=useState(initialModels[0].name)
+ const [fanCount,setFanCount]=useState('')
+ const [fanSource,setFanSource]=useState('Nuevo suscriptor')
+ const [fanChatter,setFanChatter]=useState('')
+ const [postModel,setPostModel]=useState(initialModels[0].name)
+ const [postKind,setPostKind]=useState('Historia')
+ const [postCaption,setPostCaption]=useState('')
+ const [postStatus,setPostStatus]=useState('Publicado')
+ const [postChatter,setPostChatter]=useState('')
  const total=sales.reduce((a,s)=>a+s.amount,0)
  const filtered=useMemo(()=>models.filter(m=>(m.name+' '+m.handle).toLowerCase().includes(search.toLowerCase())),[models,search])
  const title=navItems.find(n=>n[0]===section)?.[2]||'Resumen'
  function addModel(e:React.FormEvent){e.preventDefault();if(!modelName.trim())return;setModels(v=>[...v,{id:Date.now(),name:modelName.trim(),handle:handle.trim()||'Sin usuario',status:'Activa',revenue:0,chatter:chatter||'Sin asignar'}]);setModelName('');setHandle('');setChatter('');setShowModel(false)}
- function addSale(e:React.FormEvent){e.preventDefault();const amount=Number(saleAmount);if(!amount||amount<=0)return;setSales(v=>[{id:Date.now(),model:saleModel,type:saleType,amount,chatter:saleChatter||'Sin asignar',date:'Hoy'},...v]);setSaleAmount('');setSaleChatter('');setShowSale(false)}\n function addFans(e:React.FormEvent){e.preventDefault();const count=Number(fanCount);if(!count||count<=0)return;setFanEntries(v=>[{id:Date.now(),model:fanModel,count,source:fanSource,chatter:fanChatter||'Chatter sin identificar',date:'Hoy'},...v]);setFanCount('');setFanChatter('')}\n function addContent(e:React.FormEvent){e.preventDefault();setContentEntries(v=>[{id:Date.now(),model:postModel,kind:postKind,caption:postCaption,status:postStatus,chatter:postChatter||'Chatter sin identificar',date:'Hoy'},...v]);setPostCaption('');setPostChatter('')}
+ function addSale(e:React.FormEvent){e.preventDefault();const amount=Number(saleAmount);if(!amount||amount<=0)return;setSales(v=>[{id:Date.now(),model:saleModel,type:saleType,amount,chatter:saleChatter||'Sin asignar',date:'Hoy'},...v]);setSaleAmount('');setSaleChatter('');setShowSale(false)}
+ function addFans(e:React.FormEvent){e.preventDefault();const count=Number(fanCount);if(!count||count<=0)return;setFanEntries(v=>[{id:Date.now(),model:fanModel,count,source:fanSource,chatter:fanChatter||'Chatter sin identificar',date:'Hoy'},...v]);setFanCount('');setFanChatter('')}
+ function addContent(e:React.FormEvent){e.preventDefault();setContentEntries(v=>[{id:Date.now(),model:postModel,kind:postKind,caption:postCaption,status:postStatus,chatter:postChatter||'Chatter sin identificar',date:'Hoy'},...v]);setPostCaption('');setPostChatter('')}
  return <div className="shell">
   <aside className="sidebar">
    <div className="brand"><div className="brand-mark">MAISON</div><div className="brand-sub">MANAGEMENT · AGENCY OS</div></div>
