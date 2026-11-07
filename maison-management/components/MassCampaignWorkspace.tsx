@@ -48,7 +48,7 @@ export default function MassCampaignWorkspace({models,supabase}:{models:Model[];
   if(amount>0&&!mediaFiles.length){setError('Un PPV masivo necesita contenido multimedia del vault.');return}
   if(scheduledDate&&(!Number.isFinite(scheduledDate.getTime())||scheduledDate.getTime()<=Date.now())){setError('La programación debe ser una fecha futura.');return}
   const action=scheduledDate?'programar':'enviar ahora'
-  const approved=window.confirm('Vas a '+action+' una campaña de OnlyFans.\nModelo: '+(model?.name||'')+'\nListas: '+selected.length+'\nDestinatarios aproximados: '+selectedCount+'\n\nEsta acción se ejecutará fuera de MAISON. ¿Confirmas?')
+  const approved=window.confirm('Vas a '+action+' una campaña de OnlyFans.\nModelo: '+(model?.name||'')+'\nListas: '+selected.length+'\nDestinatarios aproximados: '+selectedCount+'\nPPV: '+(amount?amount+' USD':'Gratis')+'\nArchivos: '+mediaFiles.length+'\n\nEsta acción se ejecutará fuera de MAISON. ¿Confirmas?')
   if(!approved)return
   setSending(true);setError('');setNotice('')
   try{
