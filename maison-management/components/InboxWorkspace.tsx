@@ -154,6 +154,7 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
       setMessages(rows.slice().reverse())
       await fetch('/api/inbox/chats/read', { method:'POST', headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({modelId,chatId,action:'read'}) })
       setChats(current=>current.map(item=>String(item.fan?.id||'')===chatId?{...item,unreadMessagesCount:0}:item))
+      await supabase.from('inbox_conversations').update({unread_count:0}).eq('model_id',modelId).eq('provider_chat_id',chatId)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al abrir conversación.')
       setMessages([])
@@ -249,6 +250,7 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.error || 'No se pudo marcar como no leído.')
       setSelectedChat({...selectedChat,unreadMessagesCount:1})
+      await supabase.from('inbox_conversations').update({unread_count:1}).eq('model_id',modelId).eq('provider_chat_id',chatId)
       await loadChats()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo actualizar el chat.')
