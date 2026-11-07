@@ -12,7 +12,8 @@ export async function GET(request: Request) {
   }
 
   const context = await getFansApiContext(request, modelId)
-  if ('error' in context) return context.error
+  if ('error' in context) return context.error;
+  if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
 
   const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 50)))
   const params = new URLSearchParams({ limit: String(limit), order: 'desc', skip_users: 'none' })
