@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   if (!/^[0-9a-f-]{36}$/i.test(modelId)) return NextResponse.json({ error: 'Modelo no válido.' }, { status: 400 })
   const context = await getFansApiContext(request, modelId)
   if ('error' in context) return context.error;
+  if (context.role === 'chatter') return NextResponse.json({ error: 'Solo administradores y supervisores pueden consultar listas de campañas.' }, { status: 403 });
   if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
   const result = await fansApiRequest(`https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/user-lists?view=queue&limit=50&offset=0`, context.apiKey)
   if (!result.response.ok) return NextResponse.json({ error: 'No se pudieron cargar las listas de destinatarios.', provider: result.payload }, { status: result.response.status })
