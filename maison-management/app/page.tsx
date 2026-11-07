@@ -57,10 +57,61 @@ export default function Home(){
  const total=sales.reduce((a,s)=>a+s.amount,0)
  const filtered=useMemo(()=>models.filter(m=>(m.name+' '+m.handle).toLowerCase().includes(search.toLowerCase())),[models,search])
  const title=navItems.find(n=>n[0]===section)?.[2]||'Resumen'
- function addModel(e:React.FormEvent){e.preventDefault();if(!modelName.trim())return;setModels(v=>[...v,{id:Date.now(),name:modelName.trim(),handle:handle.trim()||'Sin usuario',status:'Activa',revenue:0,chatter:chatter||'Sin asignar'}]);setModelName('');setHandle('');setChatter('');setShowModel(false)}
- function addSale(e:React.FormEvent){e.preventDefault();const amount=Number(saleAmount);if(!amount||amount<=0)return;setSales(v=>[{id:Date.now(),model:saleModel,type:saleType,amount,chatter:saleChatter||'Sin asignar',date:'Hoy'},...v]);setSaleAmount('');setSaleChatter('');setShowSale(false)}
- function addFans(e:React.FormEvent){e.preventDefault();const count=Number(fanCount);if(!count||count<=0)return;setFanEntries(v=>[{id:Date.now(),model:fanModel,count,source:fanSource,chatter:fanChatter||'Chatter sin identificar',date:'Hoy'},...v]);setFanCount('');setFanChatter('')}
- function addContent(e:React.FormEvent){e.preventDefault();setContentEntries(v=>[{id:Date.now(),model:postModel,kind:postKind,caption:postCaption,status:postStatus,chatter:postChatter||'Chatter sin identificar',date:'Hoy'},...v]);setPostCaption('');setPostChatter('')}
+ useEffect(()=>{
+  if(!supabase){setAuthLoading(false);return}
+  supabase.auth.getSession().then(({data})=>{setAuthUser(data.session?.user||null);setAuthLoading(false)})
+  const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>setAuthUser(session?.user||null))
+  return ()=>subscription.unsubscribe()
+ },[supabase])
+ useEffect(()=>{
+  if(!supabase||!authUser){setAuthProfile(null);return}
+  let alive=true
+  supabase.from('profiles').select('full_name,role,active').eq('id',authUser.id).single().then(({data,error})=>{
+   if(!alive)return
+   if(error){setDataError('No se pudo cargar tu perfil: '+error.message);return}
+   setAuthProfile(data)
+  })
+  return ()=>{alive=false}
+ },[supabase,authUser])
+ useEffect(()=>{
+  if(!supabase||!authUser||!authProfile?.active)return
+  let alive=true;setDataLoading(true);setDataError('')
+  Promise.all([
+   supabase.from('models').select('id,display_name,onlyfans_username,active').order('created_at',{ascending:false}),
+   supabase.from('sales').select('id,model_id,sale_type,amount,chatter_id,occurred_at,models(display_name)').order('occurred_at',{ascending:false}),
+   supabase.from('fan_events').select('id,model_id,quantity,source,chatter_id,occurred_at,models(display_name)').order('occurred_at',{ascending:false}),
+   supabase.from('publications').select('id,model_id,content_type,caption,status,created_at,models(display_name)').order('created_at',{ascending:false})
+  ]).then(([mr,sr,fr,pr])=>{
+   if(!alive)return
+   const err=[mr.error,sr.error,fr.error,pr.error].find(Boolean);if(err)setDataError(err.message)
+   const ms=(mr.data||[]).map((m:any)=>({id:m.id,name:m.display_name,handle:m.onlyfans_username||'Sin usuario',status:m.active?'Activa':'Inactiva',revenue:0,chatter:'Sin asignar'}))
+   setModels(ms);if(ms[0]){setSaleModel(ms[0].name);setFanModel(ms[0].name);setPostModel(ms[0].name)}
+   setSales((sr.data||[]).map((x:any)=>({id:x.id,model:x.models?.display_name||'Modelo',type:x.sale_type,amount:Number(x.amount),chatter:x.chatter_id===authUser.id?(authProfile.full_name||authUser.email||'Yo'):'Equipo',date:new Date(x.occurred_at).toLocaleDateString()})))
+   setFanEntries((fr.data||[]).map((x:any)=>({id:x.id,model:x.models?.display_name||'Modelo',count:x.quantity,source:x.source,chatter:x.chatter_id===authUser.id?(authProfile.full_name||authUser.email||'Yo'):'Equipo',date:new Date(x.occurred_at).toLocaleDateString()})))
+   setContentEntries((pr.data||[]).map((x:any)=>({id:x.id,model:x.models?.display_name||'Modelo',kind:x.content_type==='story'?'Historia':x.content_type==='photo'?'Foto':x.content_type==='video'?'Video':'Publicación normal',caption:x.caption,status:x.status==='published'?'Publicado':x.status==='scheduled'?'Programado':'Pendiente',chatter:'Equipo',date:new Date(x.created_at).toLocaleDateString()})))
+  }).finally(()=>{if(alive)setDataLoading(false)})
+  return ()=>{alive=false}
+ },[supabase,authUser,authProfile])
+ async function handleAuth(e:React.FormEvent){
+  e.preventDefault();if(!supabase)return
+  setAuthBusy(true);setAuthError('');setAuthNotice('')
+  const result=authMode==='signup'
+   ?await supabase.auth.signUp({email:authEmail,password:authPassword,options:{emailRedirectTo:window.location.origin}})
+   :await supabase.auth.signInWithPassword({email:authEmail,password:authPassword})
+  setAuthBusy(false)
+  if(result.error){setAuthError(result.error.message);return}
+  if(authMode==='signup'&&!result.data.session)setAuthNotice('Cuenta creada. Revisa tu correo para confirmar el registro y luego inicia sesión.')
+ }
+ async function signOut(){await supabase?.auth.signOut();setAuthProfile(null);setModels([]);setSales([]);setFanEntries([]);setContentEntries([])}
+ async function addModel(e:React.FormEvent){e.preventDefault();if(!supabase||!modelName.trim())return;const {data,error}=await supabase.from('models').insert({display_name:modelName.trim(),onlyfans_username:handle.trim()||null,created_by:authUser?.id}).select().single();if(error){setDataError(error.message);return}setModels(v=>[{id:data.id,name:data.display_name,handle:data.onlyfans_username||'Sin usuario',status:'Activa',revenue:0,chatter:'Sin asignar'},...v]);setModelName('');setHandle('');setChatter('');setShowModel(false)}
+ async function addSale(e:React.FormEvent){e.preventDefault();const amount=Number(saleAmount),model=models.find(m=>m.name===saleModel);if(!supabase||!model||!amount||amount<=0)return;const {data,error}=await supabase.from('sales').insert({model_id:model.id,sale_type:saleType,amount,currency:'USD',chatter_id:authUser?.id}).select('id,occurred_at').single();if(error){setDataError(error.message);return}setSales(v=>[{id:data.id,model:saleModel,type:saleType,amount,chatter:authProfile?.full_name||authUser?.email||'Yo',date:new Date(data.occurred_at).toLocaleDateString()},...v]);setSaleAmount('');setSaleChatter('');setShowSale(false)}
+ async function addFans(e:React.FormEvent){e.preventDefault();const count=Number(fanCount),model=models.find(m=>m.name===fanModel);if(!supabase||!model||!count||count<=0)return;const {data,error}=await supabase.from('fan_events').insert({model_id:model.id,quantity:count,source:fanSource,chatter_id:authUser?.id}).select('id,occurred_at').single();if(error){setDataError(error.message);return}setFanEntries(v=>[{id:data.id,model:fanModel,count,source:fanSource,chatter:authProfile?.full_name||authUser?.email||'Yo',date:new Date(data.occurred_at).toLocaleDateString()},...v]);setFanCount('');setFanChatter('')}
+ async function addContent(e:React.FormEvent){e.preventDefault();const model=models.find(m=>m.name===postModel);if(!supabase||!model)return;const content_type=postKind==='Historia'?'story':postKind==='Foto'?'photo':postKind==='Video'?'video':'post';const {data,error}=await supabase.from('publications').insert({model_id:model.id,created_by:authUser?.id,content_type,caption:postCaption,status:'draft'}).select('id,created_at').single();if(error){setDataError(error.message);return}setContentEntries(v=>[{id:data.id,model:postModel,kind:postKind,caption:postCaption,status:'Pendiente',chatter:authProfile?.full_name||authUser?.email||'Yo',date:new Date(data.created_at).toLocaleDateString()},...v]);setPostCaption('');setPostChatter('')}
+ if(authLoading)return <div className="shell" style={{minHeight:'100vh',display:'grid',placeItems:'center',color:'#fff'}}>Cargando MAISON MANAGEMENT…</div>
+ if(!supabase)return <div className="shell" style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,color:'#fff'}}><div className="panel" style={{maxWidth:520,padding:32}}><h1>MAISON MANAGEMENT</h1><p>Faltan las variables de conexión de Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en Vercel y vuelve a desplegar.</p></div></div>
+ if(!authUser)return <div className="shell" style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,color:'#fff'}}><form onSubmit={handleAuth} className="panel" style={{width:'100%',maxWidth:430,padding:32,display:'grid',gap:16}}><div className="brand-mark">MAISON</div><div className="brand-sub">MANAGEMENT · AGENCY OS</div><h1>{authMode==='login'?'Iniciar sesión':'Crear cuenta'}</h1><p className="muted">Acceso privado al espacio de trabajo de tu agencia.</p><label>Correo electrónico<input type="email" required value={authEmail} onChange={e=>setAuthEmail(e.target.value)}/></label><label>Contraseña<input type="password" minLength={8} required value={authPassword} onChange={e=>setAuthPassword(e.target.value)}/></label>{authError&&<p style={{color:'#ff9b9b'}}>{authError}</p>}{authNotice&&<p style={{color:'#9fe3b0'}}>{authNotice}</p>}<button className="btn" disabled={authBusy}>{authBusy?'Procesando…':authMode==='login'?'Entrar':'Crear cuenta'}</button><button type="button" className="btn-ghost" onClick={()=>{setAuthMode(authMode==='login'?'signup':'login');setAuthError('');setAuthNotice('')}}>{authMode==='login'?'Crear una cuenta nueva':'Ya tengo cuenta'}</button></form></div>
+ if(!authProfile)return <div className="shell" style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,color:'#fff'}}><div className="panel" style={{maxWidth:520,padding:32}}><h1>Perfil pendiente</h1><p>Tu cuenta existe, pero todavía no tiene un perfil activo en MAISON MANAGEMENT. Contacta al administrador de la agencia.</p><button className="btn" onClick={signOut}>Cerrar sesión</button></div></div>
+ if(!authProfile.active)return <div className="shell" style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,color:'#fff'}}><div className="panel" style={{maxWidth:520,padding:32}}><h1>Acceso suspendido</h1><p>Tu usuario está desactivado. Contacta al administrador.</p><button className="btn" onClick={signOut}>Cerrar sesión</button></div></div>
  return <div className="shell">
   <aside className="sidebar">
    <div className="brand"><div className="brand-mark">MAISON</div><div className="brand-sub">MANAGEMENT · AGENCY OS</div></div>
