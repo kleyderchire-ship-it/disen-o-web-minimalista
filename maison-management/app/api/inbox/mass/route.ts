@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   if (body?.saveForLater === true) payload.saveForLater = true
   if (body?.blockBannedWords === true) payload.blockBannedWords = 'risky'
 
-  const response = await fansApiRequest(`https://app.onlyfansapi.com/api/${encodeURIComponent(context.accountId)}/mass-messaging`, context.apiKey, {
+  const response = await fansApiRequest(`https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/mass-messaging`, context.apiKey, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': request.headers.get('idempotency-key') || crypto.randomUUID() }, body: JSON.stringify(payload),
   })
   if (!response.response.ok) return NextResponse.json({ error: 'Fans API rechazó la campaña.', provider: response.payload }, { status: response.response.status })
