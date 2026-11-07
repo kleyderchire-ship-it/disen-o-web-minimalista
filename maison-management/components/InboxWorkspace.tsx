@@ -341,11 +341,11 @@ export default function InboxWorkspace({ models, supabase, role }: { models: Mod
   return <section className="inbox-workspace">
     <div className="inbox-toolbar">
       <div className="field"><label>Cuenta de modelo</label><select value={modelId} onChange={e => setModelId(e.target.value)}>{models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></div>
-      <button className="btn-ghost" onClick={loadChats} disabled={loadingChats}>{loadingChats ? 'Actualizando…' : '↻ Actualizar bandeja'}</button>
+      <button className="btn-ghost" onClick={() => loadChats()} disabled={loadingChats}>{loadingChats ? 'Actualizando…' : '↻ Actualizar bandeja'}</button>
     </div>
     <div className="inbox-layout">
       <aside className="inbox-list panel">
-        <div className="inbox-search"><input className="search" placeholder="Buscar fan…" value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') loadChats() }}/><button className="btn-ghost" onClick={loadChats}>Buscar</button></div>
+        <div className="inbox-search"><input className="search" placeholder="Buscar fan…" value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') loadChats() }}/><button className="btn-ghost" onClick={() => loadChats()}>Buscar</button></div>
         <div className="inbox-filters">{[['all','Todos'],['unread','No leídos'],['priority','Prioridad'],['with_tips','Propinas']].map(([value,label]) => <button key={value} className={'inbox-filter ' + (filter === value ? 'selected' : '')} onClick={() => setFilter(value)}>{label}</button>)}</div>
         <div className="inbox-chat-list">
           {loadingChats && <div className="empty">Cargando conversaciones…</div>}
