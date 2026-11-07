@@ -55,7 +55,7 @@ export default function MassCampaignWorkspace({models,supabase}:{models:Model[];
    const response=await fetch('/api/inbox/mass',{method:'POST',headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({modelId,campaignName:campaignName.trim()||'Campaña MAISON',text:message.trim(),userLists:selected,mediaFiles,price:amount,lockedText,scheduledDate:scheduledDate?.toISOString(),blockBannedWords:blockBanned})})
    const payload=await response.json()
    if(!response.ok)throw new Error(payload.error||'No se pudo ejecutar la campaña.')
-   setNotice(scheduledDate?'Campaña programada correctamente.':'Campaña enviada a Fans API.')
+   setNotice(payload.warning || (scheduledDate?'Campaña programada correctamente.':'Campaña enviada a Fans API.'))
    setMessage('');setCampaignName('');setScheduled('');setMediaIds('');setPrice('');setLockedText(false)
   }catch(e){setError(e instanceof Error?e.message:'No se pudo ejecutar la campaña.')}
   finally{setSending(false)}
