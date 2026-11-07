@@ -13,7 +13,13 @@ export async function POST(request: Request,{params}:{params:Promise<{listId:str
   const context=await getFansApiContext(request,modelId)
   if('error' in context)return context.error
   if(!('accountId' in context))return NextResponse.json({error:'Cuenta no disponible.'},{status:409})
-  const url=`https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/user-lists/${encodeURIComponent(listId)}/users`
+  const base=`https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}`
+  const lists=await fansApiRequest(base+'/user-lists?limit=50&offset=0',context.apiKey)
+  if(!lists.response.ok)return NextResponse.json({error:'No se pudieron validar las etiquetas.',provider:lists.payload},{status:lists.response.status})
+  const rows=Array.isArray((lists.payload as any)?.data)?(lists.payload as any).data:[]
+  const list=rows.find((item:any)=>String(item.id)===listId&&item.type==='custom'&&item.canAddUsers)
+  if(!list)return NextResponse.json({error:'La etiqueta no existe o no permite añadir fans.'},{status:404})
+  const url=base+`/user-lists/${encodeURIComponent(listId)}/users`
   const result=await fansApiRequest(url,context.apiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids,skip_invalid:true})})
   if(!result.response.ok)return NextResponse.json({error:'No se pudieron agregar los fans a la etiqueta.',provider:result.payload},{status:result.response.status})
   return NextResponse.json(result.payload)
