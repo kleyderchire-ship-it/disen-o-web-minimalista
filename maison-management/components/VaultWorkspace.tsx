@@ -13,7 +13,31 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
  const [query,setQuery]=useState('')
  const [loading,setLoading]=useState(false)
  const [error,setError]=useState('')
+ const [uploadFile,setUploadFile]=useState<File|null>(null)
+ const [uploadUrl,setUploadUrl]=useState('')
+ const [uploading,setUploading]=useState(false)
+ const [uploadNotice,setUploadNotice]=useState('')
  useEffect(()=>{if(!modelId&&models.length)setModelId(models[0].id)},[models,modelId])
+ async function upload(){
+  if(!modelId||(!uploadFile&&!uploadUrl.trim()))return
+  if(uploadFile&&uploadFile.size>4*1024*1024){setError('La carga directa admite hasta 4 MB. Para videos más grandes utiliza una URL HTTPS.');return}
+  if(!window.confirm('Vas a subir contenido al vault de OnlyFans de '+(models.find(m=>m.id===modelId)?.name||'esta modelo')+'. ¿Confirmas?'))return
+  setUploading(true);setError('');setUploadNotice('')
+  try{
+   const {data}=await supabase.auth.getSession()
+   const form=new FormData()
+   form.append('modelId',modelId)
+   if(uploadFile)form.append('file',uploadFile)
+   else form.append('file_url',uploadUrl.trim())
+   const response=await fetch('/api/vault/upload',{method:'POST',headers:{Authorization:'Bearer '+(data.session?.access_token||'')},body:form})
+   const payload=await response.json()
+   if(!response.ok)throw new Error(payload.error||'No se pudo subir el archivo.')
+   setUploadNotice('Contenido subido al vault de OnlyFans.')
+   setUploadFile(null);setUploadUrl('')
+   await load()
+  }catch(e){setError(e instanceof Error?e.message:'Error subiendo contenido.')}
+  finally{setUploading(false)}
+ }
  async function load(){
   if(!modelId)return
   setLoading(true);setError('')
@@ -32,6 +56,7 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
  }
  useEffect(()=>{if(modelId)load()},[modelId,type])
  return <div className="vault-workspace">
+  <div className="panel vault-upload-panel"><div className="section-head"><div><h2>Subir contenido al vault</h2><p className="page-intro">Añade fotos, videos o audio a la biblioteca de la cuenta.</p></div></div><div className="vault-upload-controls"><div className="field"><label>Archivo (máximo 4 MB)</label><input type="file" accept="image/*,video/*,audio/*" onChange={e=>setUploadFile(e.target.files?.[0]||null)}/></div><div className="vault-or">o</div><div className="field"><label>URL pública HTTPS (para archivos grandes)</label><input value={uploadUrl} onChange={e=>setUploadUrl(e.target.value)} placeholder="https://…"/></div><button className="btn" onClick={upload} disabled={uploading||(!uploadFile&&!uploadUrl.trim())}>{uploading?'Subiendo…':'Subir al vault'}</button></div>{uploadNotice&&<div className="notice inbox-feedback-ok">{uploadNotice}</div>}</div>
   <div className="vault-toolbar">
    <div className="field"><label>Modelo</label><select value={modelId} onChange={e=>setModelId(e.target.value)}>{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
    <div className="field"><label>Tipo de archivo</label><select value={type} onChange={e=>setType(e.target.value)}><option value="">Todos</option><option value="photo">Fotos</option><option value="video">Videos</option><option value="gif">GIF</option><option value="audio">Audio</option></select></div>
