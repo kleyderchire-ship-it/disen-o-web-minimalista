@@ -50,7 +50,7 @@ export default function VaultWorkspace({models,supabase}:{models:Model[];supabas
      if(status==='completed'){completed=true;break}
      if(status==='failed')throw new Error(statusPayload?.error||'Fans API no pudo procesar el archivo.')
     }
-    if(!completed){setUploadNotice('La carga sigue procesándose en segundo plano. Actualiza la biblioteca en unos minutos.');return}
+    if(!completed){setUploadNotice('La carga sigue procesándose en segundo plano. Actualiza la biblioteca en unos minutos.');setUploadFile(null);setUploadUrl('');setAsyncUpload(false);return}
    }
    setUploadNotice('Contenido listo en el vault de OnlyFans.')
    setUploadFile(null);setUploadUrl('');setAsyncUpload(false)
