@@ -36,12 +36,11 @@ jobs:
         run: pnpm --dir maison-management build
       - name: Commit updated workspace lockfile
         run: |
-          git pull --rebase origin main
-          pnpm install --no-frozen-lockfile
           git add pnpm-lock.yaml
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git commit -m 'Update pnpm workspace lockfile'
+            git pull --rebase origin main
             git push
           fi
