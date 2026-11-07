@@ -9,7 +9,7 @@
 6. Invite the remaining team members and assign their roles and model assignments from the admin workflow.
 
 ## Fans API
-- Create an API key in the Fans API console and add it to Vercel as `FANS_API_KEY` (encrypted).
+- Create an API key at the Fans API Console (`https://app.fansapi.com`) and add it to Vercel as `FANS_API_KEY` (encrypted). API requests use `https://api.fansapi.com/api/`.
 - Account connection must use the creator-authorized mobile app flow. Never request OnlyFans passwords, cookies, or 2FA codes in MAISON chat.
 - Store only the provider account identifier and connection state in `platform_accounts`; keep API keys and tokens server-side.
 - Publication requests must be made from server routes after checking the signed-in user's role and model assignment. Chatter publishing should require an explicit confirmation and be logged.
@@ -27,11 +27,12 @@ The receiver verifies the Fans API `Signature` header with HMAC-SHA256 and dedup
 
 ### Finish the webhook connection
 1. In Supabase Dashboard, open Edge Functions → Secrets and add `FANS_API_WEBHOOK_SECRET` with a long random secret of your choice.
-2. In the Fans API Console → Webhooks, create an OnlyFans webhook with endpoint:
+2. In the Fans API Console (`https://app.fansapi.com`) → Webhooks, create an OnlyFans webhook with endpoint:
    `https://nejcpgkpynzpnoujllrx.supabase.co/functions/v1/fans-api-webhook`
 3. Paste the same signing secret into the webhook's Signing Secret field.
-4. Subscribe to `subscriptions.new`, `subscriptions.renewed`, and `subscriptions.expired`.
-5. Connect each creator's OnlyFans account with their own authorization. Map the provider's `acct_...` account ID to the correct model in `public.platform_accounts` and set `connection_status='connected'`. Events are rejected if the account is not mapped to a connected MAISON model.
-6. Send a test event from the Fans API console and verify that a fan appears in MAISON's Fans section.
+4. Subscribe to `subscriptions.new`, `subscriptions.renewed`, `subscriptions.expired`, `messages.received`, `messages.sent`, and `transactions.new`.
+5. In MAISON → Modelos, an administrator starts the Auth+ connection. The creator completes it on her own iPhone. MAISON then saves the returned `acct_...` identifier and connected state against that model automatically. Events are rejected if the account is not mapped to a connected MAISON model.
+6. Send test events from the Fans API console and verify that messages appear in Mensajes, subscriber changes in Fans, and transaction totals in Ventas.
 
 Do not put the signing secret or Fans API API key in browser code, Git, or chat. Webhooks are event-driven and near real-time, but provider delivery may be delayed or retried; the receiver is idempotent.
+\n\n## Automatic inbox and sales sync\n\nThe webhook now processes `messages.received` and `messages.sent` into the inbox cache, and `transactions.new` into sales and fan-event records. Inbox tables are enabled for Supabase Realtime so open workspaces can refresh when events arrive. Delivery is signature-verified and deduplicated with the provider's idempotency header.\n
