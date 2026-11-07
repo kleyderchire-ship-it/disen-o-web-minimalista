@@ -15,6 +15,11 @@ export async function GET(request: Request) {
   if ('error' in context) return context.error;
   if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
 
+  const { data: assignment } = await context.supabase.from('inbox_conversations').select('assigned_to').eq('model_id',modelId).eq('provider_chat_id',chatId).maybeSingle()
+  if (context.role === 'chatter' && (!assignment || assignment.assigned_to !== context.user.id)) {
+    return NextResponse.json({ error: 'Esta conversación no está asignada a tu usuario.' }, { status: 403 })
+  }
+
   const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 50)))
   const params = new URLSearchParams({ limit: String(limit), order: 'desc', skip_users: 'none' })
   const firstId = searchParams.get('first_id')
@@ -44,6 +49,11 @@ export async function POST(request: Request) {
 
   const context = await getFansApiContext(request, modelId)
   if ('error' in context) return context.error
+
+  const { data: assignment } = await context.supabase.from('inbox_conversations').select('assigned_to').eq('model_id',modelId).eq('provider_chat_id',chatId).maybeSingle()
+  if (context.role === 'chatter' && (!assignment || assignment.assigned_to !== context.user.id)) {
+    return NextResponse.json({ error: 'Esta conversación no está asignada a tu usuario.' }, { status: 403 })
+  }
 
   const idempotencyKey = request.headers.get('idempotency-key') || crypto.randomUUID()
   const payload: Record<string, unknown> = {}
