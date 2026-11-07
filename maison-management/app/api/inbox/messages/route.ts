@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const firstId = searchParams.get('first_id')
   if (firstId && /^\d{1,32}$/.test(firstId)) params.set('first_id', firstId)
 
-  const url = `https://app.onlyfansapi.com/api/${encodeURIComponent(context.accountId)}/chats/${encodeURIComponent(chatId)}/messages?${params.toString()}`
+  const url = `https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/chats/${encodeURIComponent(chatId)}/messages?${params.toString()}`
   const result = await fansApiRequest(url, context.apiKey)
   if (!result.response.ok) return NextResponse.json({ error: 'No se pudo cargar la conversación.', provider: result.payload }, { status: result.response.status })
   return NextResponse.json(result.payload)
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   if (price > 0) payload.price = price
   if (lockedText) payload.lockedText = true
 
-  const url = `https://app.onlyfansapi.com/api/${encodeURIComponent(context.accountId)}/chats/${encodeURIComponent(chatId)}/messages`
+  const url = `https://api.fansapi.com/api/${encodeURIComponent(context.accountId)}/chats/${encodeURIComponent(chatId)}/messages`
   const result = await fansApiRequest(url, context.apiKey, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
