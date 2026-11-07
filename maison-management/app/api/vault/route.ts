@@ -8,7 +8,8 @@ export async function GET(request: Request) {
   const modelId = searchParams.get('modelId') || ''
   if (!/^[0-9a-f-]{36}$/i.test(modelId)) return NextResponse.json({ error: 'Modelo no válido.' }, { status: 400 })
   const context = await getFansApiContext(request, modelId)
-  if ('error' in context) return context.error
+  if ('error' in context) return context.error;
+  if (!('accountId' in context)) return NextResponse.json({ error: 'Cuenta no disponible.' }, { status: 409 })
 
   const params = new URLSearchParams()
   const query = searchParams.get('query') || ''
