@@ -45,8 +45,20 @@ export async function getFansApiContext(request: Request, modelId: string) {
   return { supabase, user, role, accountId: account.provider_account_id, apiKey }
 }
 
+const FANS_API_ORIGIN = 'https://app.onlyfansapi.com'
+
 export async function fansApiRequest(url: string, apiKey: string, init: RequestInit = {}) {
-  const response = await fetch(url, {
+  const target = new URL(url)
+  // Canonicalize the legacy API host to the current Fans API origin.
+  if (target.hostname === 'api.fansapi.com' || target.hostname === 'api.onlyfansapi.com') {
+    target.protocol = 'https:'
+    target.hostname = new URL(FANS_API_ORIGIN).hostname
+    target.port = ''
+  }
+  if (target.hostname !== 'app.onlyfansapi.com') {
+    throw new Error('Fans API request blocked: unexpected API host.')
+  }
+  const response = await fetch(target.toString(), {
     ...init,
     cache: 'no-store',
     headers: { Authorization: `Bearer ${apiKey}`, ...(init.headers || {}) },
