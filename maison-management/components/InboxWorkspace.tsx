@@ -33,7 +33,7 @@ type Message = {
 const plain = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim()
 const time = (value?: string) => value ? new Date(value).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : ''
 
-export default function InboxWorkspace({ models, supabase }: { models: ModelOption[]; supabase: SupabaseClient }) {
+export default function InboxWorkspace({ models, supabase, role }: { models: ModelOption[]; supabase: SupabaseClient; role: string }) {
   const [modelId, setModelId] = useState('')
   const [chats, setChats] = useState<Chat[]>([])
   const [messages, setMessages] = useState<Message[]>([])
@@ -54,6 +54,9 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
   const [loadingVault, setLoadingVault] = useState(false)
   const [vaultError, setVaultError] = useState('')
   const [conversationId, setConversationId] = useState('')
+  const [assignedTo, setAssignedTo] = useState('')
+  const [teamProfiles, setTeamProfiles] = useState<Array<{id:string;full_name:string;role:string}>>([])
+  const [currentUserId, setCurrentUserId] = useState('')
   const [notes, setNotes] = useState<Note[]>([])
   const [noteDraft, setNoteDraft] = useState('')
   const [scripts, setScripts] = useState<Script[]>([])
@@ -109,21 +112,37 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
     setError('')
     try {
       const fan = chat.fan || {}
-      const { data: conversation } = await supabase.from('inbox_conversations').upsert({
-        model_id: modelId,
-        provider_chat_id: chatId,
-        fan_username: fan.username || null,
-        fan_display_name: fan.displayName || fan.name || null,
-        fan_avatar_url: fan.avatarThumbs?.c144 || fan.avatar || null,
-        last_message_preview: plain(chat.lastMessage?.text || ''),
-        last_message_at: chat.lastMessage?.createdAt || null,
-      }, { onConflict: 'model_id,provider_chat_id' }).select('id').single()
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id || ''
+      setCurrentUserId(userId)
+      const { data: existingConversation } = await supabase.from('inbox_conversations')
+        .select('id,assigned_to').eq('model_id',modelId).eq('provider_chat_id',chatId).maybeSingle()
+      let conversation: {id:string;assigned_to:string|null}|null = existingConversation as any
+      if (!conversation) {
+        const { data: created, error: createError } = await supabase.from('inbox_conversations').insert({
+          model_id:modelId,provider_chat_id:chatId,fan_username:fan.username||null,
+          fan_display_name:fan.displayName||fan.name||null,fan_avatar_url:fan.avatarThumbs?.c144||fan.avatar||null,
+          last_message_preview:plain(chat.lastMessage?.text||''),last_message_at:chat.lastMessage?.createdAt||null,
+          assigned_to:role==='chatter'?userId:null,
+        }).select('id,assigned_to').single()
+        if(createError)throw createError
+        conversation=created as any
+      } else if (role==='chatter' && !conversation.assigned_to) {
+        const { data: claimed, error: claimError } = await supabase.from('inbox_conversations').update({assigned_to:userId})
+          .eq('id',conversation.id).select('id,assigned_to').single()
+        if(claimError)throw claimError
+        conversation=claimed as any
+      } else if (role==='chatter' && conversation.assigned_to!==userId) {
+        throw new Error('Esta conversación está asignada a otro chatter.')
+      }
       if (conversation?.id) {
         setConversationId(conversation.id)
+        setAssignedTo(conversation.assigned_to||'')
         const { data: noteRows } = await supabase.from('inbox_conversation_notes').select('id,note,author_id,created_at').eq('conversation_id',conversation.id).order('created_at',{ascending:false})
         setNotes((noteRows || []) as Note[])
       } else {
         setConversationId('')
+        setAssignedTo('')
         setNotes([])
       }
       const token = await accessToken()
@@ -206,6 +225,21 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
     }
   }
 
+  useEffect(() => {
+    if (role!=='admin' && role!=='supervisor') return
+    supabase.from('profiles').select('id,full_name,role').eq('active',true).order('full_name').then(({data}) => {
+      setTeamProfiles((data || []) as Array<{id:string;full_name:string;role:string}>)
+    })
+  }, [role])
+
+  async function assignConversation(nextUserId:string) {
+    if(!conversationId)return
+    const {error}=await supabase.from('inbox_conversations').update({assigned_to:nextUserId||null}).eq('id',conversationId)
+    if(error){setError(error.message);return}
+    setAssignedTo(nextUserId)
+    setNotice(nextUserId?'Conversación asignada.':'Conversación liberada.')
+  }
+
   async function markUnread() {
     if (!selectedChat || !modelId) return
     const chatId = String(selectedChat.fan?.id || '')
@@ -284,7 +318,7 @@ export default function InboxWorkspace({ models, supabase }: { models: ModelOpti
       <div className="inbox-thread panel">
         {!selectedChat && <div className="empty inbox-thread-empty"><div style={{fontSize:32,marginBottom:12}}>✉</div><strong>Tu centro de mensajes</strong><p>Selecciona una conversación para ver el historial y responder desde MAISON.</p></div>}
         {selectedChat && <>
-          <header className="inbox-thread-head"><div><strong>{selectedChat.fan?.displayName || selectedChat.fan?.name || selectedChat.fan?.username || 'Conversación'}</strong><small>@{selectedChat.fan?.username || selectedChat.fan?.id}</small></div><div className="inbox-thread-actions"><span className="date-pill">{selectedChat.unreadMessagesCount ? selectedChat.unreadMessagesCount + ' sin leer' : 'Conversación'}</span><button type="button" className="btn-ghost" onClick={markUnread}>Marcar no leído</button></div></header>
+          <header className="inbox-thread-head"><div><strong>{selectedChat.fan?.displayName || selectedChat.fan?.name || selectedChat.fan?.username || 'Conversación'}</strong><small>@{selectedChat.fan?.username || selectedChat.fan?.id}</small></div><div className="inbox-thread-actions"><span className="date-pill">{selectedChat.unreadMessagesCount ? selectedChat.unreadMessagesCount + ' sin leer' : 'Conversación'}</span>{(role==='admin'||role==='supervisor')?<select className="inbox-assign-select" value={assignedTo} onChange={e=>assignConversation(e.target.value)}><option value="">Sin asignar</option>{teamProfiles.map(person=><option key={person.id} value={person.id}>{person.full_name} · {person.role}</option>)}</select>:<span className="date-pill">{assignedTo===currentUserId?'Asignado a ti':'Asignado'}</span>}<button type="button" className="btn-ghost" onClick={markUnread}>Marcar no leído</button></div></header>
           {notes.length>0&&<div className="inbox-notes"><strong>Notas internas del equipo</strong>{notes.slice(0,3).map(note=><p key={note.id}>{note.note}<small>{time(note.created_at)}</small></p>)}</div>}
           <div className="inbox-messages">
             {loadingMessages && <div className="empty">Cargando mensajes…</div>}
