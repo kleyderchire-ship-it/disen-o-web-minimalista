@@ -15,7 +15,8 @@ export async function GET(request: Request) {
   const query = searchParams.get('query') || ''
   const type = searchParams.get('type') || ''
   const field = searchParams.get('field') || 'recent'
-  const offset = Math.max(0, Number(searchParams.get('offset') || 0))
+  const rawOffset = Number(searchParams.get('offset') || 0)
+  const offset = Number.isFinite(rawOffset) ? Math.min(100000, Math.max(0, Math.trunc(rawOffset))) : 0
   if (query.trim()) params.set('query', query.trim().slice(0, 100))
   if (['photo','gif','video','audio'].includes(type)) params.set('type', type)
   if (['recent','most-liked','highest-tips'].includes(field)) params.set('field', field)
