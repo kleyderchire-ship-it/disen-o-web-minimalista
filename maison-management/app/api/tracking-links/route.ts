@@ -9,6 +9,7 @@ export async function GET(request:Request){
  if(!/^[0-9a-f-]{36}$/i.test(modelId))return NextResponse.json({error:'Modelo no válido.'},{status:400})
  const context=await getFansApiContext(request,modelId)
  if('error' in context)return context.error
+ if(context.role==='chatter')return NextResponse.json({error:'Solo administradores y supervisores pueden gestionar tracking links.'},{status:403})
  if(!('accountId' in context))return NextResponse.json({error:'Cuenta no disponible.'},{status:409})
  const params=new URLSearchParams({limit:'100',offset:searchParams.get('offset')||'0',pagination:'1',sort:'desc',sortby:'created_date'})
  for(const key of ['startDate','endDate']){const value=searchParams.get(key);if(value)params.set(key,value)}
