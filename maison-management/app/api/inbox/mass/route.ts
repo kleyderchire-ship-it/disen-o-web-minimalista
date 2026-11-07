@@ -39,12 +39,13 @@ export async function POST(request: Request) {
   })
   if (!response.response.ok) return NextResponse.json({ error: 'Fans API rechazó la campaña.', provider: response.payload }, { status: response.response.status })
   const providerData: any = response.payload
-  await context.supabase.from('mass_message_campaigns').insert({
+  const { error: logError } = await context.supabase.from('mass_message_campaigns').insert({
     model_id: modelId, provider_campaign_id: providerData?.data?.id ? String(providerData.data.id) : null,
     campaign_name: String(body?.campaignName || 'Campaña ' + new Date().toLocaleString()),
     message_text: text, audience: { userLists, userIds, excludedLists, price, mediaFilesCount: mediaFiles.length },
     scheduled_at: scheduledDate || null, status: body?.saveForLater ? 'draft' : scheduledDate ? 'scheduled' : 'sent',
     created_by: context.user.id, provider_response: providerData,
   })
+  if (logError) return NextResponse.json({ warning: 'Fans API aceptó la campaña, pero MAISON no pudo guardar el registro local.', provider: response.payload }, { status: 207 })
   return NextResponse.json(response.payload)
 }
