@@ -244,7 +244,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 begin
   insert into public.profiles (id, full_name, role)
   values (
@@ -255,7 +255,7 @@ begin
   on conflict (id) do nothing;
   return new;
 end;
-$;
+$$;
 revoke all on function private.handle_new_user() from public, anon, authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
