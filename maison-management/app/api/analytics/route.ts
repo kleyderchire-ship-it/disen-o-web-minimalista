@@ -6,6 +6,7 @@ export const runtime = 'nodejs'
 export async function GET(request: Request) {
   const context = await getFansApiUserContext(request)
   if ('error' in context) return context.error
+  if (context.role !== 'admin') return NextResponse.json({ error: 'Solo el administrador puede consultar el panel financiero global.' }, { status: 403 })
   if (!context.apiKey) return NextResponse.json({ error: 'Falta configurar FANS_API_KEY en el servidor.' }, { status: 503 })
 
   const { searchParams } = new URL(request.url)
