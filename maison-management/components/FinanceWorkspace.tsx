@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import SettlementWorkspace from './SettlementWorkspace'
 
 type Model={id:string;name:string}
 type Earnings=Record<string,{total_net?:number;total_gross?:number}|undefined>
@@ -50,5 +51,6 @@ export default function FinanceWorkspace({models,supabase}:{models:Model[];supab
    {!loading&&visible.length===0&&<tr><td colSpan={7}><div className="empty">No hay datos disponibles para este periodo.</div></td></tr>}
   </tbody></table></div>
   <p className="muted finance-note">Las estadísticas se consultan directamente desde las cuentas conectadas. Los datos de ventas recibidos por webhook se conservan por separado como historial operativo.</p>
+  <SettlementWorkspace models={models} supabase={supabase}/>
  </div>
 }
